@@ -2,6 +2,7 @@
 #define A3_A3_ENGINE_H
 
 #include "Cameras.h"
+#include "World.h"
 
 #include <CSCI441/Camera.hpp>
 #include <CSCI441/materials.hpp>
@@ -98,7 +99,11 @@ private:
     glm::vec3 _lightDir;
 
     //========================= VAO & Object Information =========================//
-
+    
+    /// \desc world object: builds platform, trees, houses.
+    World world;
+    /// \desc texture handle per block type, loaded from World::textureFile(); 0 = untextured
+    GLuint _blockTextures[NUM_BLOCK_TYPES] = {};
     /// \desc creates the platform object
     /// \param [in] vao VAO descriptor to bind
     /// \param [in] vbo VBO descriptor to bind
@@ -132,7 +137,10 @@ private:
         GLint materialAmbColor;
         /// \desc material shininess
         GLint materialShininess;
-        
+        /// \desc 1 = sample the texture, 0 = material color only
+        GLint useTexture;
+        /// \desc texture sampler (which texture unit to read from)
+        GLint textureMap;
     } _gouraudShaderProgramUniformLocations;
     /// \desc stores the locations of all of our shader attributes
     struct GouraudShaderProgramAttributeLocations {

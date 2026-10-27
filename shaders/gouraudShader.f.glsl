@@ -8,7 +8,8 @@ uniform sampler2D tex0;                     // block texture
 
 // ========================= varying inputs ===============================//
 layout(location = 0) in vec4 litColor;      // ambient + diffuse applied to the vertex
-layout(location = 1) in vec4 specColor;     // specular color 
+layout(location = 1) in vec4 specColor;     // specular color
+layout(location = 2) in vec2 st;            // world-space texture coordinate
 
 // ============================= outputs ==================================//
 out vec4 fragColorOut;                  // color to apply to this fragment
@@ -22,7 +23,7 @@ void main() {
     // if we are looking at the front face of the fragment
 
     // white (1) when untextured, so the material color passes through unchanged
-    vec3 tex = (useTexture == 1) ? vec3(1.0) : vec3(1.0);   // T6: replace the first vec3(1.0) with texture(tex0, uv).rgb
+    vec3 tex = (useTexture == 1) ? texture(tex0, st).rgb : vec3(1.0);
 
     // texture tints the lit color, the highlight is added on top in the light's color
     fragColorOut = vec4(tex * litColor.rgb + specColor.rgb, 1.0);

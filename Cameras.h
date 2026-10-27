@@ -22,9 +22,7 @@ public:
         recomputeOrientation();
     }
 
-    /// \desc orbit around the target; phi is kept between just above the horizon and just short of
-    /// straight overhead, so the camera never goes under the ground and lookAt never becomes
-    /// degenerate (view direction parallel to the up vector makes the view flip/spin)
+    /// \desc orbit around the target
     void rotate(const GLfloat dTheta, const GLfloat dPhi) override {
         mCameraTheta += dTheta;
         mCameraPhi = glm::clamp(mCameraPhi + dPhi, MIN_PHI, MAX_PHI);

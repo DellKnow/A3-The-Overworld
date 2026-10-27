@@ -1,10 +1,13 @@
 #include "A3Engine.h"
 
-
 #include <CSCI441/FixedCam.hpp>
 #include <CSCI441/objects.hpp>
+#include <CSCI441/TextureUtils.hpp>
 
 #include <cmath>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
 //============================= Helper Functions =============================//
 
@@ -21,7 +24,7 @@ A3Engine::A3Engine()
         _pArcballCam(nullptr),
         _lightDir( glm::vec3(0.f, 0.f, 0.f) ),
         _gouraudShaderProgram(nullptr),
-        _gouraudShaderProgramUniformLocations( {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1} ),
+        _gouraudShaderProgramUniformLocations( {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1} ),
         _gouraudShaderProgramAttributeLocations( {-1, -1} ),
         _flatShaderProgram(nullptr),
         _flatShaderProgramUniformLocations( {-1, -1} )
@@ -129,6 +132,10 @@ void A3Engine::mSetupShaders() {
     _gouraudShaderProgramUniformLocations.materialSpecColor     = _gouraudShaderProgram->getUniformLocation("materialSpecColor");
     _gouraudShaderProgramUniformLocations.materialAmbColor      = _gouraudShaderProgram->getUniformLocation("materialAmbColor");
     _gouraudShaderProgramUniformLocations.materialShininess     = _gouraudShaderProgram->getUniformLocation("materialShininess");
+    _gouraudShaderProgramUniformLocations.useTexture            = _gouraudShaderProgram->getUniformLocation("useTexture");
+    _gouraudShaderProgramUniformLocations.textureMap            = _gouraudShaderProgram->getUniformLocation("tex0");
+    // the sampler reads from texture unit 0, which is where block textures get bound
+    _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.textureMap, 0);
     // get attribute locations
     _gouraudShaderProgramAttributeLocations.vPos                = _gouraudShaderProgram->getAttributeLocation("vPos");
     _gouraudShaderProgramAttributeLocations.vNormal             = _gouraudShaderProgram->getAttributeLocation("vNormal");
@@ -161,6 +168,9 @@ void A3Engine::mSetupBuffers() {
 }
 
 void A3Engine::_createPlatform(const GLuint vao, const GLuint vbo, const GLuint ibo, GLsizei &numVAOPoints) const {
+    
+    // 
+    
     // container for our vertex data
     struct VertexNormalCoordinate {
         GLfloat x, y, z;        // x. y, z position
@@ -197,7 +207,13 @@ void A3Engine::_createPlatform(const GLuint vao, const GLuint vbo, const GLuint 
 }
 
 void A3Engine::mSetupTextures() {
-    // unused in this lab
+    // load every texture the world asks for; block types without one keep handle 0
+    for (int t = 0; t < NUM_BLOCK_TYPES; t++) {
+        if (const char* file = World::textureFile(static_cast<BlockType>(t))) {
+            // mipmapped far away avoids shimmering
+            _blockTextures[t] = CSCI441::TextureUtils::loadAndRegisterTexture(file, GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST);
+        }
+    }
 }
 
 void A3Engine::mSetupScene() {
@@ -219,6 +235,9 @@ void A3Engine::mSetupScene() {
     // set flat shading color
     constexpr glm::vec3 flatColor(1.0f, 1.0f, 1.0f);
     _flatShaderProgram->setProgramUniform( _flatShaderProgramUniformLocations.color, flatColor );
+
+    // build world platform
+    world.build();
 }
 
 void A3Engine::mSetupFonts() {
@@ -258,6 +277,7 @@ void A3Engine::mCleanupBuffers() {
 
 void A3Engine::mCleanupTextures() {
     CSCI441::LogUtils::log("[INFO]: ...deleting Textures\n" );
+    glDeleteTextures(NUM_BLOCK_TYPES, _blockTextures);     // handle 0 is silently ignored
 }
 
 void A3Engine::mCleanupScene() {
@@ -278,23 +298,47 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
     _gouraudShaderProgram->useProgram();
     _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.cameraPosition, camPos);
 
-    // gold teapot, ruby sphere, jade cube: different materials should look differently
-    struct TestObjects { glm::vec3 pos; CSCI441::Materials::Material mat; int shape; };
-    const TestObjects objects[] = {
-        { {-3.0f, 1.0f, 0.0f}, CSCI441::Materials::GOLD, 0 },
-        { { 0.0f, 1.0f, 0.0f}, CSCI441::Materials::RUBY, 1 },
-        { { 3.0f, 1.0f, 0.0f}, CSCI441::Materials::JADE, 2 },
-    };
-    for (const auto& o : objects) {
-        const glm::mat4 modelMtx = glm::translate(glm::mat4(1.0f), o.pos);
-        _computeAndSendTransformationMatrices(_gouraudShaderProgram, modelMtx, viewMtx, projMtx,
-            _gouraudShaderProgramUniformLocations.mvpMatrix,
-            _gouraudShaderProgramUniformLocations.normalMatrix,
-            _gouraudShaderProgramUniformLocations.modelMatrix);
-        _setMaterialProperties(o.mat);
-        if      (o.shape == 0) CSCI441::drawSolidTeapot();
-        else if (o.shape == 1) CSCI441::drawSolidSphere(1.0f, 32, 32);
-        else                   CSCI441::drawSolidCube(1.5f);
+    // // gold teapot, ruby sphere, jade cube: different materials should look differently
+    // struct TestObjects { glm::vec3 pos; CSCI441::Materials::Material mat; int shape; };
+    // const TestObjects objects[] = {
+    //     { {-3.0f, 1.0f, 0.0f}, CSCI441::Materials::GOLD, 0 },
+    //     { { 0.0f, 1.0f, 0.0f}, CSCI441::Materials::RUBY, 1 },
+    //     { { 3.0f, 1.0f, 0.0f}, CSCI441::Materials::JADE, 2 },
+    // };
+    // for (const auto& o : objects) {
+    //     const glm::mat4 modelMtx = glm::translate(glm::mat4(1.0f), o.pos);
+    //     _computeAndSendTransformationMatrices(_gouraudShaderProgram, modelMtx, viewMtx, projMtx,
+    //         _gouraudShaderProgramUniformLocations.mvpMatrix,
+    //         _gouraudShaderProgramUniformLocations.normalMatrix,
+    //         _gouraudShaderProgramUniformLocations.modelMatrix);
+    //     _setMaterialProperties(o.mat);
+    //     if      (o.shape == 0) CSCI441::drawSolidTeapot();
+    //     else if (o.shape == 1) CSCI441::drawSolidSphere(1.0f, 32, 32);
+    //     else                   CSCI441::drawSolidCube(1.5f);
+    // }
+
+    for (int t = 0; t < NUM_BLOCK_TYPES; t++) {
+        const auto blockType = static_cast<BlockType>(t);
+        _setMaterialProperties(World::material(blockType));
+
+        // textured types sample their image
+        const GLboolean textured = _blockTextures[t] != 0;
+        _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.useTexture, textured ? 1 : 0);
+        if (textured) {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, _blockTextures[t]);
+        }
+        for (const Block& block : world.blocks(blockType)) {
+            // move the unit cube to the block's center, then stretch it (scale happens first, around the cube's own center)
+            const glm::mat4 modelMtx = glm::scale(glm::translate(glm::mat4(1.0f), block.position), block.scale);
+            _computeAndSendTransformationMatrices(_gouraudShaderProgram, modelMtx, viewMtx, projMtx,
+                _gouraudShaderProgramUniformLocations.mvpMatrix,
+                _gouraudShaderProgramUniformLocations.normalMatrix,
+                _gouraudShaderProgramUniformLocations.modelMatrix
+            );
+
+            CSCI441::drawSolidCube(1.0);
+        }
     }
 }
 

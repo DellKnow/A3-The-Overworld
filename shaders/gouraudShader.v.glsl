@@ -22,7 +22,8 @@ layout(location = 1) in vec3 vNormal;       // the normal of this specific verte
 
 // ========================= varying inputs =================================//
 layout(location = 0) out vec4 litColor;     // ambient + diffuse applied to the vertex
-layout(location = 1) out vec4 specColor;    // specular color 
+layout(location = 1) out vec4 specColor;    // specular color
+layout(location = 2) out vec2 st;           // world-space texture coordinate
 
 // compute the diffuse color using lambertian diffuse reflectance
 vec3 diffuseColor(vec3 N, vec3 L) {
@@ -62,4 +63,9 @@ void main() {
     // assign the final components to the vertex
     litColor = vec4(ambient + diffuse, 1.0f);
     specColor = vec4(specular, 1.0f);
+
+    // texture coordinates from the world position, projected along the face's axis:
+    if      (abs(N.y) > 0.5) st = worldPos.xz;  // top / bottom faces
+    else if (abs(N.x) > 0.5) st = worldPos.zy;  // faces pointing along x
+    else                     st = worldPos.xy;  // faces pointing along z
 }

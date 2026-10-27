@@ -1,4 +1,4 @@
-CSCI441 Log Generated at 22:18:23 25 Oct 2026
+CSCI441 Log Generated at 23:20:00 26 Oct 2026
 [INFO]: Using CSCI441 Library v6.1.3.0
 [INFO]: GLFW v3.5.1 initialized
 [INFO]: GLFW Window created
@@ -96,7 +96,7 @@ CSCI441 Log Generated at 22:18:23 25 Oct 2026
 [INFO]: |   0) type: vec3            name: vNormal       loc:  1 |
 [INFO]: |   1) type: vec3            name: vPos          loc:  0 |
 [INFO]: >--------------------------------------------------------<
-[INFO]: | GL_ACTIVE_UNIFORMS:                                 11 |
+[INFO]: | GL_ACTIVE_UNIFORMS:                                 12 |
 [INFO]: |   0) type: vec3            name: camPos        loc:  2 |
 [INFO]: |   1) type: vec3            name: lightColor    loc:  0 |
 [INFO]: |   2) type: vec3            name: lightDir      loc:  8 |
@@ -107,7 +107,8 @@ CSCI441 Log Generated at 22:18:23 25 Oct 2026
 [INFO]: |   7) type: mat4            name: modelMtx      loc:  9 |
 [INFO]: |   8) type: mat4            name: mvpMatrix     loc:  6 |
 [INFO]: |   9) type: mat3            name: normalMtx     loc:  7 |
-[INFO]: |  10) type: int             name: useTexture    loc: 10 |
+[INFO]: |  10) type: sampler2D       name: tex0          loc: 11 |
+[INFO]: |  11) type: int             name: useTexture    loc: 10 |
 [INFO]: \--------------------------------------------------------/
 
 
@@ -128,15 +129,16 @@ CSCI441 Log Generated at 22:18:23 25 Oct 2026
 [INFO]: |   1) type: vec3            name: color         loc:  1 |
 [INFO]: \--------------------------------------------------------/
 
+[INFO]: Successfully loaded texture "assets/textures/classic/water.png" with handle 1
 
 [INFO]: Setup complete
-[INFO]: Init Time:    0.570s
-[INFO]: 	GLFW:     0.346s
-[INFO]: 	OpenGL:   0.130s
-[INFO]: 	Shaders:  0.086s
+[INFO]: Init Time:    0.597s
+[INFO]: 	GLFW:     0.284s
+[INFO]: 	OpenGL:   0.165s
+[INFO]: 	Shaders:  0.112s
 [INFO]: 	Buffers:  0.000s
-[INFO]: 	Textures: 0.000s
-[INFO]: 	Fonts:    0.005s
+[INFO]: 	Textures: 0.031s
+[INFO]: 	Fonts:    0.003s
 [INFO]: 	Scene:    0.000s
 
 [INFO]: Shutting down.......
@@ -150,11 +152,11 @@ CSCI441 Log Generated at 22:18:23 25 Oct 2026
 [INFO]: ...closing window...
 [INFO]: ...closing GLFW.....
 [INFO]: ..shut down complete!
-[INFO]: Shutdown:   0.055s
+[INFO]: Shutdown:   0.043s
 [INFO]: 	Scene:    0.001s
 [INFO]: 	Fonts:    0.000s
 [INFO]: 	Textures: 0.001s
 [INFO]: 	Buffers:  0.004s
 [INFO]: 	Shaders:  0.001s
 [INFO]: 	OpenGL:   0.000s
-[INFO]: 	GLFW:     0.046s
+[INFO]: 	GLFW:     0.033s
