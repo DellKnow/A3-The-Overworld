@@ -449,14 +449,13 @@ void A3Engine::run() {
 
 //========================= Private Helper Functions =========================//
 
-
 void A3Engine::_setMaterialProperties(const CSCI441::Materials::Material& material) const {
     // ensure our shader program is not null
     if(_gouraudShaderProgram) {
         // set the D, S, A, & shininess components of the material to our Gouraud Shader
-        glProgramUniform3fv( _gouraudShaderProgram->getShaderProgramHandle(), _gouraudShaderProgramUniformLocations.materialDiffColor, 1, material.diffuse   );
-        glProgramUniform3fv( _gouraudShaderProgram->getShaderProgramHandle(), _gouraudShaderProgramUniformLocations.materialSpecColor, 1, material.specular  );
-        glProgramUniform3fv( _gouraudShaderProgram->getShaderProgramHandle(), _gouraudShaderProgramUniformLocations.materialAmbColor,  1, material.ambient   );
+        glProgramUniform4fv( _gouraudShaderProgram->getShaderProgramHandle(), _gouraudShaderProgramUniformLocations.materialDiffColor, 1, material.diffuse   );
+        glProgramUniform4fv( _gouraudShaderProgram->getShaderProgramHandle(), _gouraudShaderProgramUniformLocations.materialSpecColor, 1, material.specular  );
+        glProgramUniform4fv( _gouraudShaderProgram->getShaderProgramHandle(), _gouraudShaderProgramUniformLocations.materialAmbColor,  1, material.ambient   );
         glProgramUniform1f(  _gouraudShaderProgram->getShaderProgramHandle(), _gouraudShaderProgramUniformLocations.materialShininess,    material.shininess );
     }
 }

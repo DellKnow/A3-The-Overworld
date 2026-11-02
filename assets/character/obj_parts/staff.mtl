@@ -1,0 +1,17 @@
+# Each material contains Ka, Kd, Ks, Ns for Phong lighting
+
+newmtl material_00_07_Warm_brown_branch
+Ka 0.057600 0.036800 0.019200
+Kd 0.360000 0.230000 0.120000
+Ks 0.080000 0.080000 0.080000
+Ns 8.0000
+d 1.0
+illum 2
+
+newmtl material_default
+Ka 0.104000 0.104000 0.104000
+Kd 0.650000 0.650000 0.650000
+Ks 0.120000 0.120000 0.120000
+Ns 14.0000
+d 1.0
+illum 2

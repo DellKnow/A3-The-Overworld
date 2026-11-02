@@ -1,4 +1,4 @@
-"""Pumpkin Scarecrow — clean low-poly character for Blender 4.2-5.x
+"""Pumpkin Scarecrow
 
 Designed for a C++ / OpenGL hierarchical character: each arm, elbow, hand,
 hip, knee, foot, head and accessory is a separate object / group.
@@ -9,19 +9,7 @@ IMPORTANT: CLEAR_SCENE=True deletes all objects in the open Blender scene.
 Front direction: -Y; right: +X; up: +Z; feet rest at Z=0.
 Character height ~4.65 Blender units (including stem).
 
-Export GLB manually with File > Export > glTF 2.0 > glTF Binary, or set
-EXPORT_GLB=True and edit GLB_PATH below. GLB preserves object hierarchy.
-
-Script is assisted with chatGPT help.
-
-Component	                        Triangles
-Pumpkin head	                    1,036
-Face, stem, and details	            129
-Body, clothes, scarf, satchel	    568
-Both arms and hands	                648
-Both legs and feet	                488
-Wooden staff	                    140
-Total	                            3,009
+Script was assisted with chatGPT.
 """
 import bpy
 import math
@@ -29,14 +17,14 @@ from mathutils import Vector
 from math import sin, cos, pi, sqrt
 from pathlib import Path
 
-# ---------------------------------- Settings ------------------------------
+#================================ Settings ============================================#
 CLEAR_SCENE = True
 ADD_STAFF = True
 EXPORT_GLB = False
 GLB_PATH = str(Path.home() / 'PumpkinScarecrow.glb')
 SHOW_EXTRA_SCENE_OBJECTS = False  # no camera / floor / lights by default
 
-# ---------------------------------- General --------------------------------
+#================================= General ============================================#
 if CLEAR_SCENE:
     if bpy.context.object and bpy.context.object.mode != 'OBJECT':
         bpy.ops.object.mode_set(mode='OBJECT')
@@ -216,7 +204,7 @@ HIP_R=pivot('LEG_R / hip',(.19,0,1.64),ROOT)
 KNEE_R=pivot('KNEE_R / bend',(.20,0,.87),HIP_R)
 FOOT_R=pivot('FOOT_R / ankle',(.22,0,.16),KNEE_R)
 
-# ---------------------------- Body and costume ------------------------------
+#========================= Body and costume ============================================#
 def ragged_tunic():
     rings=[(1.67,.39,.27),(2.03,.33,.24),(2.62,.35,.24)]
     sides=12
@@ -281,7 +269,7 @@ for s,label,hip,knee,foot in [(-1,'L',HIP_L,KNEE_L,FOOT_L),(1,'R',HIP_R,KNEE_R,F
     attach(cylinder('Bent toe '+label,(s*.22,-.02,.12),(s*.24,-.25,.08),.061,.028,WOOD,6),foot)
     attach(cylinder('Point of toe '+label,(s*.24,-.25,.08),(s*.25,-.34,.13),.028,.006,WOOD_L,5),foot)
 
-# --------------------------- Arms and gloves -------------------------------
+#========================= Arms and gloves ============================================#
 for s,label,shoulder,elbow,wrist in [
     (-1,'L',SHOULDER_L,ELBOW_L,WRIST_L),
     (1,'R',SHOULDER_R,ELBOW_R,WRIST_R),
@@ -314,7 +302,8 @@ if ADD_STAFF:
     for i,(a,b,r1,r2) in enumerate(pieces):
         attach(cylinder('Staff branch %02d'%i,a,b,r1,r2,WOOD,6),STAFF)
 
-# ----------------------------- Pumpkin head -------------------------------
+
+#========================= Pumpkin head ============================================#
 HZ=3.56
 RX,RY,RZ=.82,.70,.73
 LOBES=10
@@ -394,7 +383,7 @@ for s,label in [(-1,'L'),(1,'R')]:
     attach(carved_face('One tooth '+label,
                        [(s*.22,3.16),(s*.13,3.16),(s*.17,3.06)],ORANGE_HI,.109),HEAD)
 
-# ------------------------ Clean Blender viewport --------------------------
+#========================= Clean Blender viewport ============================================#
 # Hide extra viewport relationship/pivot lines, which made v1 look crowded.
 for screen in bpy.data.screens:
     for area in screen.areas:

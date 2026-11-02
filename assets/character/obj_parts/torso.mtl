@@ -1,0 +1,57 @@
+# Each material contains Ka, Kd, Ks, Ns for Phong lighting
+
+newmtl material_00_19_Brass_buckle
+Ka 0.132800 0.105600 0.054400
+Kd 0.830000 0.660000 0.340000
+Ks 0.590000 0.590000 0.590000
+Ns 50.0000
+d 1.0
+illum 2
+
+newmtl material_01_18_Leather_flap
+Ka 0.059200 0.041600 0.030400
+Kd 0.370000 0.260000 0.190000
+Ks 0.100000 0.100000 0.100000
+Ns 12.0000
+d 1.0
+illum 2
+
+newmtl material_02_17_Dark_leather_satchel
+Ka 0.040000 0.028800 0.022400
+Kd 0.250000 0.180000 0.140000
+Ks 0.100000 0.100000 0.100000
+Ns 12.0000
+d 1.0
+illum 2
+
+newmtl material_03_13_Muted_blue_scarf
+Ka 0.076800 0.110400 0.128000
+Kd 0.480000 0.690000 0.800000
+Ks 0.040000 0.040000 0.040000
+Ns 6.0000
+d 1.0
+illum 2
+
+newmtl material_04_10_Straw_yellow_shirt
+Ka 0.142400 0.116800 0.056000
+Kd 0.890000 0.730000 0.350000
+Ks 0.040000 0.040000 0.040000
+Ns 6.0000
+d 1.0
+illum 2
+
+newmtl material_05_11_Russet_red_vest
+Ka 0.091200 0.028800 0.019200
+Kd 0.570000 0.180000 0.120000
+Ks 0.040000 0.040000 0.040000
+Ns 6.0000
+d 1.0
+illum 2
+
+newmtl material_default
+Ka 0.104000 0.104000 0.104000
+Kd 0.650000 0.650000 0.650000
+Ks 0.120000 0.120000 0.120000
+Ns 14.0000
+d 1.0
+illum 2

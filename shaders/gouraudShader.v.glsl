@@ -11,9 +11,9 @@ uniform vec3 lightColor;                    // light color
 uniform vec3 camPos;                        // camera position
 
 // material
-uniform vec3 materialDiffColor;             // the material diffuse color
-uniform vec3 materialSpecColor;             // the material specular color
-uniform vec3 materialAmbColor;              // the material ambient color
+uniform vec4 materialDiffColor;             // the material diffuse color
+uniform vec4 materialSpecColor;             // the material specular color
+uniform vec4 materialAmbColor;              // the material ambient color
 uniform float materialShininess;            // the material shininess
 
 // ======================== attribute inputs ===============================//
@@ -27,12 +27,12 @@ layout(location = 2) out vec2 st;           // world-space texture coordinate
 
 // compute the diffuse color using lambertian diffuse reflectance
 vec3 diffuseColor(vec3 N, vec3 L) {
-    return lightColor * materialDiffColor * max( dot(N, L), 0.0 );
+    return lightColor * materialDiffColor.rgb * max( dot(N, L), 0.0 );
 }
 
 // compute the ambient color, light scattered uniformly throughout the scene
 vec3 ambientColor() {
-    return lightColor * materialAmbColor;
+    return lightColor * materialAmbColor.rgb;
 }
 
 // compute the specular color, direct reflection off shiny surfaces
@@ -43,7 +43,7 @@ vec3 specularColor(vec3 N, vec3 L, vec3 worldPos) {
     vec3 R = 2.0 * dot(N, L) * N - L;           // mirror of L around N
     vec3 V = normalize(camPos - worldPos);      // direction from the vertex to the eye
 
-    return lightColor * materialSpecColor * pow(max( dot(R, V), 0.0 ), materialShininess);
+    return lightColor * materialSpecColor.rgb * pow(max( dot(R, V), 0.0 ), materialShininess);
 }
 
 void main() {

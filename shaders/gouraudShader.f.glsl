@@ -2,7 +2,7 @@
 
 // ========================= uniform inputs ===============================//
 uniform vec3 lightColor;                    // light color
-uniform vec3 materialAmbColor;              // the material ambient color
+uniform vec4 materialAmbColor;              // the material ambient color
 uniform int useTexture;                     // 1 = this draw is textured, 0 = plain material color
 uniform sampler2D tex0;                     // block texture
 
@@ -17,7 +17,7 @@ out vec4 fragColorOut;                  // color to apply to this fragment
 void main() {
     // if we are looking at the back face of the fragment
     if (!gl_FrontFacing) {
-        fragColorOut = vec4( lightColor * materialAmbColor, 1.0f );
+        fragColorOut = vec4( lightColor * materialAmbColor.rgb, 1.0f );
         return;
     } 
     // if we are looking at the front face of the fragment
