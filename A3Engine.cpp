@@ -262,6 +262,24 @@ void A3Engine::mSetupScene() {
 
     grid.numOfPoints = static_cast<GLsizei>(grid.gridPoints.size());
 
+    ShaderInfo shaderInfo {
+        _gouraudShaderProgram->getShaderProgramHandle(),
+
+        _gouraudShaderProgramAttributeLocations.vPos,
+        _gouraudShaderProgramAttributeLocations.vNormal,
+
+        _gouraudShaderProgramUniformLocations.materialDiffColor,
+        _gouraudShaderProgramUniformLocations.materialSpecColor,
+        _gouraudShaderProgramUniformLocations.materialAmbColor,
+        _gouraudShaderProgramUniformLocations.materialShininess
+    };
+
+    character.initialize(shaderInfo);
+
+    // start on the inner road, on the side of the island facing the camera
+    const glm::vec3 start(0.5f, world.groundHeight(0.5f, -25.5f), -25.5f);
+    character.setPosition(start);
+    _pArcballCam->setTarget(start);
 }
 
 void A3Engine::mSetupFonts() {
@@ -318,30 +336,35 @@ void A3Engine::mCleanupFonts() {
 
 //====================== Rendering / Drawing Functions =======================//
 
+void A3Engine::_basicRenderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, const glm::vec3& camPos) const {
+    _gouraudShaderProgram->useProgram();
+    _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.cameraPosition, camPos);
+    
+    // gold teapot, ruby sphere, jade cube: different materials should look differently
+    struct TestObjects { glm::vec3 pos; CSCI441::Materials::Material mat; int shape; };
+    const TestObjects objects[] = {
+        { {-3.0f, 1.0f, 0.0f}, CSCI441::Materials::GOLD, 0 },
+        { { 0.0f, 1.0f, 0.0f}, CSCI441::Materials::RUBY, 1 },
+        { { 3.0f, 1.0f, 0.0f}, CSCI441::Materials::JADE, 2 },
+    };
+    for (const auto& o : objects) {
+        const glm::mat4 modelMtx = glm::translate(glm::mat4(1.0f), o.pos);
+        _computeAndSendTransformationMatrices(_gouraudShaderProgram, modelMtx, viewMtx, projMtx,
+            _gouraudShaderProgramUniformLocations.mvpMatrix,
+            _gouraudShaderProgramUniformLocations.normalMatrix,
+            _gouraudShaderProgramUniformLocations.modelMatrix);
+        _setMaterialProperties(o.mat);
+        if      (o.shape == 0) CSCI441::drawSolidTeapot();
+        else if (o.shape == 1) CSCI441::drawSolidSphere(1.0f, 32, 32);
+        else                   CSCI441::drawSolidCube(1.5f);
+    }
+}
+
 void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, const glm::vec3& camPos) const {
     _gouraudShaderProgram->useProgram();
     _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.cameraPosition, camPos);
 
-    // // gold teapot, ruby sphere, jade cube: different materials should look differently
-    // struct TestObjects { glm::vec3 pos; CSCI441::Materials::Material mat; int shape; };
-    // const TestObjects objects[] = {
-    //     { {-3.0f, 1.0f, 0.0f}, CSCI441::Materials::GOLD, 0 },
-    //     { { 0.0f, 1.0f, 0.0f}, CSCI441::Materials::RUBY, 1 },
-    //     { { 3.0f, 1.0f, 0.0f}, CSCI441::Materials::JADE, 2 },
-    // };
-    // for (const auto& o : objects) {
-    //     const glm::mat4 modelMtx = glm::translate(glm::mat4(1.0f), o.pos);
-    //     _computeAndSendTransformationMatrices(_gouraudShaderProgram, modelMtx, viewMtx, projMtx,
-    //         _gouraudShaderProgramUniformLocations.mvpMatrix,
-    //         _gouraudShaderProgramUniformLocations.normalMatrix,
-    //         _gouraudShaderProgramUniformLocations.modelMatrix);
-    //     _setMaterialProperties(o.mat);
-    //     if      (o.shape == 0) CSCI441::drawSolidTeapot();
-    //     else if (o.shape == 1) CSCI441::drawSolidSphere(1.0f, 32, 32);
-    //     else                   CSCI441::drawSolidCube(1.5f);
-    // }
-
-    // draw the ground
+    //---------------------- draw the ground ----------------------//
     for (int t = 0; t < NUM_BLOCK_TYPES; t++) {
         const auto blockType = static_cast<BlockType>(t);
         _setMaterialProperties(World::material(blockType));
@@ -366,6 +389,17 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
         }
     }
 
+    //---------------------- draw the character ----------------------//
+    _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.useTexture, 0);
+    character.draw([&](const glm::mat4& modelMtx) {
+        _computeAndSendTransformationMatrices(_gouraudShaderProgram, modelMtx, viewMtx, projMtx,
+            _gouraudShaderProgramUniformLocations.mvpMatrix,
+            _gouraudShaderProgramUniformLocations.normalMatrix,
+            _gouraudShaderProgramUniformLocations.modelMatrix
+        );
+    });
+
+    //---------------------- draw the sun ----------------------//
     // sun: a flat-colored sphere far along the light direction
     _flatShaderProgram->useProgram();
     const glm::mat4 sunModelMtx = glm::scale(glm::translate(glm::mat4(1.0f), -normalize(_lightDir) * 80.0f), glm::vec3(4.0f));

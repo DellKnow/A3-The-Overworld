@@ -3,6 +3,7 @@
 
 #include "Cameras.h"
 #include "World.h"
+#include "Character.h"
 
 #include <CSCI441/Camera.hpp>
 #include <CSCI441/materials.hpp>
@@ -67,6 +68,7 @@ private:
     /// \param projMtx the current projection matrix for our camera
     /// \param camPos  the current position of the camera
     void _renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, const glm::vec3& camPos) const;
+    void _basicRenderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, const glm::vec3& camPos) const;
     /// \desc handles moving our FreeCam as determined by keyboard input
     void _updateScene();
 
@@ -102,6 +104,8 @@ private:
     
     /// \desc world object: builds platform, trees, houses.
     World world;
+    /// \desc world object: builds platform, trees, houses.
+    PumpkinCharacter character;
     /// \checker whether to draw the grid
     struct Grid {
         bool showGrid = true;

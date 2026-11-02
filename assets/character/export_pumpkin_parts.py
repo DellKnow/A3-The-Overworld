@@ -160,7 +160,7 @@ def render_part(pivot, meshes, folder, depsgraph):
                 for tri in eval_mesh.loop_triangles:
                     mat_index = eval_mesh.polygons[tri.polygon_index].material_index
                     mat = eval_mesh.materials[mat_index] if mat_index < len(eval_mesh.materials) else None
-                    mat_name = materials.get(mat, 'material_default')
+                    mat_name = materials.get(mat.original if mat else None, 'material_default')
                     if mat_name != last_mat:
                         f.write('usemtl %s\n' % mat_name)
                         last_mat = mat_name
