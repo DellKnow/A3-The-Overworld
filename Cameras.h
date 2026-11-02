@@ -7,7 +7,8 @@
 /// \desc camera that orbits a target point at a given radius; theta/phi come from mouse drags
 class ArcballCam final : public CSCI441::PerspectiveCamera {
 public:
-    explicit ArcballCam(const GLfloat aspectRatio = 1.0f) : PerspectiveCamera(aspectRatio) {
+    explicit ArcballCam(const GLfloat aspectRatio = 1.0f)
+        : PerspectiveCamera(aspectRatio, glm::quarter_pi<GLfloat>(), 0.1f, 500.0f) {
         mCameraTheta  = 0.8f;
         mCameraPhi    = 2.0f;           // > pi/2 puts the camera above the target
         mCameraRadius = 15.0f;
@@ -47,7 +48,7 @@ public:
 
 private:
     static constexpr GLfloat MIN_RADIUS = 3.0f;
-    static constexpr GLfloat MAX_RADIUS = 40.0f;
+    static constexpr GLfloat MAX_RADIUS = 1000.0f;
 
     // phi = pi/2 is level with the target, phi = pi is straight overhead
     static constexpr GLfloat MIN_PHI = 1.65f;   // ~5 deg above the horizon

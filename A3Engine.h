@@ -102,6 +102,15 @@ private:
     
     /// \desc world object: builds platform, trees, houses.
     World world;
+    /// \checker whether to draw the grid
+    struct Grid {
+        bool showGrid = true;
+        std::vector<glm::vec3> gridPoints;
+        GLuint vbo;
+        GLuint ibo;
+        GLuint vao;
+        GLint numOfPoints;
+    } grid;
     /// \desc texture handle per block type, loaded from World::textureFile(); 0 = untextured
     GLuint _blockTextures[NUM_BLOCK_TYPES] = {};
     /// \desc creates the platform object

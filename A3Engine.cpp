@@ -18,7 +18,7 @@
 //============================= Public Interface =============================//
 
 A3Engine::A3Engine()
-    : CSCI441::OpenGLEngine(4, 1, 512, 512, "A3: The Overworld"),
+    : CSCI441::OpenGLEngine(4, 1, 2560, 1440, "A3: The Overworld"),
         _mousePosition( glm::vec2(MOUSE_UNINITIALIZED, MOUSE_UNINITIALIZED ) ),
         _leftMouseButtonState( GLFW_RELEASE ),
         _pArcballCam(nullptr),
@@ -38,6 +38,9 @@ void A3Engine::handleKeyEvent(const GLint key, const GLint action) {
 
     if(action == GLFW_PRESS) {
         switch( key ) {
+            case GLFW_KEY_G:
+                grid.showGrid ^= 1;     // toggle the switch
+                break;
             // quit!
             case GLFW_KEY_Q:
             case GLFW_KEY_ESCAPE:
@@ -238,6 +241,27 @@ void A3Engine::mSetupScene() {
 
     // build world platform
     world.build();
+
+    constexpr GLfloat Y = 0.52f;                       // just above the water surface (0.5) to avoid z-fighting
+    for (int k = -World::HALF; k <= World::HALF; k++) {
+        grid.gridPoints.emplace_back(k, Y, -World::HALF);   // line along z
+        grid.gridPoints.emplace_back(k, Y,  World::HALF);
+        grid.gridPoints.emplace_back(-World::HALF, Y, k);   // line along x
+        grid.gridPoints.emplace_back( World::HALF, Y, k);
+    }
+
+    glGenVertexArrays(1, &grid.vao);
+    glBindVertexArray(grid.vao);                       // everything below gets recorded into this VAO
+
+    glGenBuffers(1, &grid.vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, grid.vbo);
+    glBufferData(GL_ARRAY_BUFFER, grid.gridPoints.size() * sizeof(glm::vec3), grid.gridPoints.data(), GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);                      // slot 0 = vPos in both shaders
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), nullptr);
+
+    grid.numOfPoints = static_cast<GLsizei>(grid.gridPoints.size());
+
 }
 
 void A3Engine::mSetupFonts() {
@@ -317,6 +341,7 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
     //     else                   CSCI441::drawSolidCube(1.5f);
     // }
 
+    // draw the ground
     for (int t = 0; t < NUM_BLOCK_TYPES; t++) {
         const auto blockType = static_cast<BlockType>(t);
         _setMaterialProperties(World::material(blockType));
@@ -329,7 +354,7 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
             glBindTexture(GL_TEXTURE_2D, _blockTextures[t]);
         }
         for (const Block& block : world.blocks(blockType)) {
-            // move the unit cube to the block's center, then stretch it (scale happens first, around the cube's own center)
+            // move the unit cube to the block's center, then stretch it
             const glm::mat4 modelMtx = glm::scale(glm::translate(glm::mat4(1.0f), block.position), block.scale);
             _computeAndSendTransformationMatrices(_gouraudShaderProgram, modelMtx, viewMtx, projMtx,
                 _gouraudShaderProgramUniformLocations.mvpMatrix,
@@ -339,6 +364,39 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
 
             CSCI441::drawSolidCube(1.0);
         }
+    }
+
+    // sun: a flat-colored sphere far along the light direction
+    _flatShaderProgram->useProgram();
+    const glm::mat4 sunModelMtx = glm::scale(glm::translate(glm::mat4(1.0f), -normalize(_lightDir) * 80.0f), glm::vec3(4.0f));
+    _computeAndSendTransformationMatrices(_flatShaderProgram, sunModelMtx, viewMtx, projMtx, 
+        _flatShaderProgramUniformLocations.mvpMatrix
+    );
+    _flatShaderProgram->setProgramUniform(_flatShaderProgramUniformLocations.color, glm::vec3(1.0f, 0.92f, 0.55f));
+    CSCI441::drawSolidSphere(1.0, 24, 24);
+
+    // if grid needs to be drawn
+    if (grid.showGrid) {
+        _flatShaderProgram->useProgram();
+        _computeAndSendTransformationMatrices(_flatShaderProgram, glm::mat4(1.0f), viewMtx, projMtx, 
+            _flatShaderProgramUniformLocations.mvpMatrix
+        );
+        glBindVertexArray(grid.vao);
+
+        // Pass 1
+        _flatShaderProgram->setProgramUniform(_flatShaderProgramUniformLocations.color, glm::vec3(1.0f));
+        for (GLsizei first = 0; first < grid.numOfPoints; first += 2) glDrawArrays(GL_LINE_STRIP, first, 2);    // each line is its own 2-point strip
+
+        // Pass 2
+        // depth writes off so these ghost lines don't block anything drawn later
+        glDepthFunc(GL_GREATER);
+        glDepthMask(GL_FALSE);
+        _flatShaderProgram->setProgramUniform(_flatShaderProgramUniformLocations.color, glm::vec3(0.35f, 0.45f, 0.6f));
+        for (GLsizei first = 0; first < grid.numOfPoints; first += 2) glDrawArrays(GL_LINE_STRIP, first, 2);
+
+        // restore normal depth state for everything after (text, later the corner viewport)
+        glDepthFunc(GL_LESS);
+        glDepthMask(GL_TRUE);
     }
 }
 

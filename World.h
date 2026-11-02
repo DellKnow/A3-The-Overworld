@@ -37,6 +37,7 @@ public:
 private:
     int  _heights[SIZE][SIZE] = {};                 // 0 = water
     bool _solid[SIZE][SIZE]   = {};                 // houses and trees block movement
+    BlockType _material[SIZE][SIZE] = {};           // material placed on the block
     std::vector<Block> _blocks[NUM_BLOCK_TYPES];    // grouped by type: bind each material once
 
     /// \desc world (x, z) -> grid cell (i, j); false if outside the grid

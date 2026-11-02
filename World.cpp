@@ -1,5 +1,30 @@
 #include "World.h"
 #include <cmath>
+#include <random>
+
+namespace {
+    /// \brief Simple helper class to return a random number between 0.0f and 1.0f.
+    class RandomGenerator {
+    public:
+        /// \brief generates a random value
+        /// \returns random GLfloat within the inclusive range [0.0f, 1.0f]
+        static GLfloat getRand() { return _dist( _rng ); }
+
+        // do not allow an object to be copied nor moved
+        RandomGenerator(RandomGenerator&) = delete;
+        RandomGenerator& operator=(RandomGenerator&) = delete;
+        RandomGenerator(RandomGenerator&&) = delete;
+        RandomGenerator& operator=(RandomGenerator&&) = delete;
+    private:
+        // do not allow an object to be externally created
+        RandomGenerator() {};
+        static std::mt19937 _rng;
+        static std::uniform_real_distribution<GLfloat> _dist;
+    };
+
+    std::mt19937 RandomGenerator::_rng = std::mt19937( std::random_device{}() );
+    std::uniform_real_distribution<GLfloat> RandomGenerator::_dist = std::uniform_real_distribution<GLfloat>( 0.0f, std::nextafter( 1.0f, 2.0f ) );
+}
 
 namespace {
     // {diffuse}, {specular}, shininess, {ambient}
@@ -50,6 +75,7 @@ bool World::_toCell(const GLfloat x, const GLfloat z, int& i, int& j) {
 }
 
 void World::_addColumn(const int i, const int j, const int height, const BlockType type) {
+    _material[i][j] = type;
     _heights[i][j] = height;
     // the unit cube is centered, so lift it by half its height to rest on y = 0
     const glm::vec3 center(i - HALF + 0.5f, height * 0.5f, j - HALF + 0.5f);
@@ -62,6 +88,7 @@ void World::build() {
 
     for (int i = 0; i < SIZE; i++) {
         for (int j = 0; j < SIZE; j++) {
+            _material[i][j] = BlockType::WATER;
             // normalized ellipse distance: 0 at the center, 1 at the shore
             const GLfloat x = i - HALF + 0.5f, z = j - HALF + 0.5f;
             const GLfloat d = std::sqrt((x / ISLAND_RX) * (x / ISLAND_RX) + (z / ISLAND_RZ) * (z / ISLAND_RZ));
@@ -84,7 +111,29 @@ void World::build() {
             _addHouse(i, j);
     }
 
-    // TODO: grass corner + trees, bridge from the shore to the corner
+    // place trees randomly on the snow
+    constexpr int NUM_TREES = 15;
+    for (int placed = 0, attempts = 0; placed < NUM_TREES && attempts < 1000; attempts++) {
+        // Generate random coordinate
+        const int i = std::min(static_cast<int>(RandomGenerator::getRand() * SIZE), SIZE - 1);
+        const int j = std::min(static_cast<int>(RandomGenerator::getRand() * SIZE), SIZE - 1);
+
+        // the whole 3x3 canopy footprint must be open snow
+        bool allSnow  = 1;
+        for (int di = -1; di <= 1; di++) {
+            for (int dj = -1; dj <= 1; dj++) {
+                const int ci = i + di, cj = j + dj;
+                if (ci >= 0 && ci < SIZE && cj >= 0 && cj < SIZE) {
+                    allSnow  &= _material[ci][cj] == BlockType::SNOW;
+                }
+            }
+        }
+        // if nothing was found, place a tree there
+        if (allSnow) {
+            _addTree(i, j);
+            placed++;
+        }
+    }
 }
 
 GLfloat World::groundHeight(const GLfloat x, const GLfloat z) const {
@@ -101,21 +150,47 @@ bool World::isWalkable(const GLfloat x, const GLfloat z, const GLfloat currentHe
 }
 
 void World::_addHouse(const int i, const int j) {
-    // cell center, standing on top of whatever ground is there (snow or road, height 1)
+    // cell center
     const glm::vec3 base(i - HALF + 0.5f, static_cast<GLfloat>(_heights[i][j]), j - HALF + 0.5f);
 
-    // walls: 3x3x3 box; the cube is centered, so lift by half its height
-    _blocks[static_cast<int>(BlockType::WOOD)].push_back({ base + glm::vec3(0.0f, 1.5f, 0.0f), glm::vec3(3.0f, 3.0f, 3.0f) });
+    // walls: 5x3x5 box; the cube is centered, so lift by half its height
+    _blocks[static_cast<int>(BlockType::WOOD)].push_back({ base + glm::vec3(0.0f, 1.5f, 0.0f), glm::vec3(5.0f, 3.0f, 5.0f) });
 
     // stepped roof: wide slab, then a small cap
-    _blocks[static_cast<int>(BlockType::ROOF)].push_back({ base + glm::vec3(0.0f, 3.5f, 0.0f), glm::vec3(3.0f, 1.0f, 3.0f) });
-    _blocks[static_cast<int>(BlockType::ROOF)].push_back({ base + glm::vec3(0.0f, 4.5f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f) });
+    _blocks[static_cast<int>(BlockType::ROOF)].push_back({ base + glm::vec3(0.0f, 3.5f, 0.0f), glm::vec3(5.0f, 1.0f, 5.0f) });
+    _blocks[static_cast<int>(BlockType::ROOF)].push_back({ base + glm::vec3(0.0f, 4.5f, 0.0f), glm::vec3(3.0f, 1.0f, 3.0f) });
 
-    // the hero can't walk through the 3x3 footprint
-    for (int di = -1; di <= 1; di++) {
-        for (int dj = -1; dj <= 1; dj++) {
+    // the hero can't walk through the 5x5 footprint
+    for (int di = -2; di <= 2; di++) {
+        for (int dj = -2; dj <= 2; dj++) {
             const int ci = i + di, cj = j + dj;
-            if (ci >= 0 && ci < SIZE && cj >= 0 && cj < SIZE) _solid[ci][cj] = true;
+            if (ci >= 0 && ci < SIZE && cj >= 0 && cj < SIZE) {
+                _solid[ci][cj] = true;
+                _material[ci][cj] = BlockType::ROOF;
+            }
         }
     }
+}
+
+void World::_addTree(const int i, const int j) {
+    // trunk height 3 or 4
+    const GLfloat trunkHeight = 3.0f + std::min(static_cast<int>(RandomGenerator::getRand() * 2), 1);
+    // cell center
+    const glm::vec3 base(i - HALF + 0.5f, static_cast<GLfloat>(_heights[i][j]), j - HALF + 0.5f);
+
+    // the hero can't walk through the tree
+    _solid[i][j] = true;
+
+    // trunk: 1 x h x 1 column resting on the ground
+    _blocks[static_cast<int>(BlockType::TRUNK)].push_back({ base + glm::vec3(0.0f, trunkHeight * 0.5f, 0.0f),
+                                                            glm::vec3(1.0f, trunkHeight, 1.0f) });
+    // canopy: 3 x 2 x 3, overlapping the trunk top by half a block
+    _blocks[static_cast<int>(BlockType::LEAVES)].push_back({ base + glm::vec3(0.0f, trunkHeight + 0.5f, 0.0f),
+                                                             glm::vec3(3.0f, 2.0f, 3.0f) });
+    // trunk blocks movement
+    _solid[i][j] = true;
+    for (int di = -1; di <= 1; di++)
+        for (int dj = -1; dj <= 1; dj++)
+            _material[i + di][j + dj] = BlockType::LEAVES; 
+    _material[i][j] = BlockType::TRUNK;
 }
