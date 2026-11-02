@@ -71,11 +71,16 @@ private:
     void _basicRenderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, const glm::vec3& camPos) const;
     /// \desc handles moving our FreeCam as determined by keyboard input
     void _updateScene();
+    /// \desc time of the last _updateScene() call, in seconds
+    GLdouble _lastUpdateTime = 0.0;
 
     /// \brief draws FPS information to screen
     /// \param fps frames per second of last frame
     /// \param fpsAvg frames per second average over last 10 frames
     void _renderTextOverlay(GLdouble fps, GLdouble fpsAvg) const;
+
+    // window position and size to return to when leaving fullscreen
+    int _windowedX = 0, _windowedY = 0, _windowedWidth = 0, _windowedHeight = 0;
 
     //==================== Input Tracking (Keyboard & Mouse) =====================//
 
@@ -175,6 +180,9 @@ private:
     
     //========================= Private Helper Functions =========================//
 
+    /// \desc switch between fullscreen and the previous window
+    void _toggleFullscreen();
+    
     /// \desc sends the material uniforms to the Gouraud Shader Program
     /// \param material material properties to set
     void _setMaterialProperties(const CSCI441::Materials::Material& material) const;

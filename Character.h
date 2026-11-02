@@ -104,6 +104,8 @@ private:
 public:
     void initialize(const ShaderInfo& shaderInfo);  // initialize the pumpkin character
     void setPosition(const glm::vec3& newPosition) { position = newPosition; }  // place the character in the world
+    void setRotation(const float newRotation) { rotation = newRotation; } // rotate the character in the world
+    void moveCharacter(const glm::vec3& dir) { position += dir; }   // move the character in the world in the given direction
     void update(float dt);                          // update the character position given time
     // draw the character; sendModelMtx is called with each part's model matrix before it is drawn
     void draw(const std::function<void(const glm::mat4&)>& sendModelMtx) const;

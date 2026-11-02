@@ -9,8 +9,8 @@ class ArcballCam final : public CSCI441::PerspectiveCamera {
 public:
     explicit ArcballCam(const GLfloat aspectRatio = 1.0f)
         : PerspectiveCamera(aspectRatio, glm::quarter_pi<GLfloat>(), 0.1f, 500.0f) {
-        mCameraTheta  = 0.8f;
-        mCameraPhi    = 2.0f;           // > pi/2 puts the camera above the target
+        mCameraTheta  = 0.0f;
+        mCameraPhi    = 1.85f;           // > pi/2 puts the camera above the target
         mCameraRadius = 15.0f;
         mCameraUpVector = glm::vec3(0.0f, 1.0f, 0.0f);
         mCameraLookAtPoint = glm::vec3(0.0f);
@@ -45,6 +45,10 @@ public:
         recomputeOrientation();
     }
     void moveBackward(const GLfloat amount) override { moveForward(-amount); }
+    /// \desc horizontal direction the camera is facing, used to walk the target
+    glm::vec3 getForward() const {
+        return glm::vec3(-glm::sin(mCameraTheta), 0.0f, glm::cos(mCameraTheta));
+    }
 
 private:
     static constexpr GLfloat MIN_RADIUS = 3.0f;

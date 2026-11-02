@@ -18,7 +18,7 @@
 //============================= Public Interface =============================//
 
 A3Engine::A3Engine()
-    : CSCI441::OpenGLEngine(4, 1, 2560, 1440, "A3: The Overworld"),
+    : CSCI441::OpenGLEngine(4, 1, 512, 512, "A3: The Overworld"),
         _mousePosition( glm::vec2(MOUSE_UNINITIALIZED, MOUSE_UNINITIALIZED ) ),
         _leftMouseButtonState( GLFW_RELEASE ),
         _pArcballCam(nullptr),
@@ -41,7 +41,9 @@ void A3Engine::handleKeyEvent(const GLint key, const GLint action) {
             case GLFW_KEY_G:
                 grid.showGrid ^= 1;     // toggle the switch
                 break;
-            // quit!
+            case GLFW_KEY_F11:
+                _toggleFullscreen();
+                break;
             case GLFW_KEY_Q:
             case GLFW_KEY_ESCAPE:
                 setWindowShouldClose();
@@ -98,6 +100,9 @@ void A3Engine::handleScrollEvent(const glm::vec2 offset) {
 
 void A3Engine::mSetupGLFW() {
     CSCI441::OpenGLEngine::mSetupGLFW();
+
+    // hide the black window until run(), when loading is done
+    glfwHideWindow(mpWindow);
 
     // set our callbacks
     glfwSetKeyCallback(mpWindow, a3_keyboard_callback);
@@ -399,6 +404,10 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
         );
     });
 
+    // printf("Phi = %f\n", _pArcballCam->getPhi());
+    // printf("Theta = %f\n", _pArcballCam->getTheta());
+
+
     //---------------------- draw the sun ----------------------//
     // sun: a flat-colored sphere far along the light direction
     _flatShaderProgram->useProgram();
@@ -435,8 +444,36 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
 }
 
 void A3Engine::_updateScene() {
+    // seconds since the last update, so that walking speed doesn't depend on fps
+    const GLdouble currentTime = glfwGetTime();
+    // capped so that a long frame can't step over a block: 6 * 0.1 is under one cell
+    const GLfloat dt = glm::min(static_cast<GLfloat>(currentTime - _lastUpdateTime), 0.1f);
+    _lastUpdateTime = currentTime;
 
+    constexpr GLfloat WALK_SPEED = 10.0f;    // units per second
+
+    // walk while W/S/A/D are held
+    const GLfloat inputMain = (_keys[GLFW_KEY_W] ? 1.0f : 0.0f) - (_keys[GLFW_KEY_S] ? 1.0f : 0.0f);
+    const GLfloat inputSide = (_keys[GLFW_KEY_A] ? 1.0f : 0.0f) - (_keys[GLFW_KEY_D] ? 1.0f : 0.0f);
+    if (inputMain != 0.0f || inputSide != 0.0f) {
+        const glm::vec3 forward = _pArcballCam->getForward();
+        const glm::vec3 left = glm::cross(_pArcballCam->getUpVector(), forward);
+
+        // normalized so that diagonals are as fast as straight lines
+        const glm::vec3 direction = glm::normalize(forward * inputMain + left * inputSide);
+        glm::vec3 next = _pArcballCam->getLookAtPoint() + direction * WALK_SPEED * dt;
+
+        // stay on land, out of houses and trees, and climb at most one block
+        if (world.isWalkable(next.x, next.z, next.y)) {
+            next.y = world.groundHeight(next.x, next.z);
+            _pArcballCam->setTarget(next);
+        }
+    }
+
+    character.setPosition(_pArcballCam->getLookAtPoint());
+    character.setRotation(-_pArcballCam->getTheta());
 }
+
 
 void A3Engine::_renderTextOverlay(const GLdouble fps, const GLdouble fpsAvg) const {
     CSCI441::FontUtils::bindFont();
@@ -453,6 +490,9 @@ void A3Engine::_renderTextOverlay(const GLdouble fps, const GLdouble fpsAvg) con
 }
 
 void A3Engine::run() {
+    // everything is loaded, so the first frame comes right away
+    glfwShowWindow(mpWindow);
+
     //  This is our draw loop - all rendering is done here.  We use a loop to keep the window open
     //	until the user decides to close the window and quit the program.  Without a loop, the
     //	window will display once and then the program exits.
@@ -465,6 +505,16 @@ void A3Engine::run() {
         // query what the actual size of the window we are rendering to is.
         GLint framebufferWidth, framebufferHeight;
         glfwGetFramebufferSize( mpWindow, &framebufferWidth, &framebufferHeight );
+
+        // after a size change, update everything that depends on the size
+        // (the size is 0 while minimized, which would break the aspect ratio)
+        if (framebufferWidth > 0 && framebufferHeight > 0 &&
+            (framebufferWidth != mFramebufferWidth || framebufferHeight != mFramebufferHeight)) {
+            setCurrentFramebufferSize(framebufferWidth, framebufferHeight);
+            _pArcballCam->setAspectRatio(static_cast<GLfloat>(framebufferWidth) / static_cast<GLfloat>(framebufferHeight));
+            CSCI441::FontUtils::setWindowSize(framebufferWidth, framebufferHeight);
+            CSCI441::FontUtils::setFontSize(2.0f / static_cast<GLfloat>(framebufferWidth), 2.0f / static_cast<GLfloat>(framebufferHeight));
+        }
 
         // update the viewport - tell OpenGL we want to render to the whole window
         glViewport( 0, 0, framebufferWidth, framebufferHeight );
@@ -482,6 +532,21 @@ void A3Engine::run() {
 }
 
 //========================= Private Helper Functions =========================//
+
+void A3Engine::_toggleFullscreen() {
+    // a monitor is only set while in fullscreen
+    if (glfwGetWindowMonitor(mpWindow)) {
+        glfwSetWindowMonitor(mpWindow, nullptr, _windowedX, _windowedY, _windowedWidth, _windowedHeight, GLFW_DONT_CARE);
+    } else {
+        // remember the window so the next F11 can restore it
+        glfwGetWindowPos(mpWindow, &_windowedX, &_windowedY);
+        glfwGetWindowSize(mpWindow, &_windowedWidth, &_windowedHeight);
+
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+        glfwSetWindowMonitor(mpWindow, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+    }
+}
 
 void A3Engine::_setMaterialProperties(const CSCI441::Materials::Material& material) const {
     // ensure our shader program is not null

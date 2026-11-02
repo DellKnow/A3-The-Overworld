@@ -112,7 +112,7 @@ void PumpkinCharacter::loadOffsets(const char* filename) {
 }
 
 void PumpkinCharacter::update(float dt) {
-
+    
 }
 
 void PumpkinCharacter::draw(const std::function<void(const glm::mat4&)>& sendModelMtx) const {
