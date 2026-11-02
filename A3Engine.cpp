@@ -22,9 +22,12 @@ A3Engine::A3Engine()
         _mousePosition( glm::vec2(MOUSE_UNINITIALIZED, MOUSE_UNINITIALIZED ) ),
         _leftMouseButtonState( GLFW_RELEASE ),
         _pArcballCam(nullptr),
+        _pFreeCam(nullptr),
+        _pInspectCam(nullptr),
+        _pActiveCamera(nullptr),
         _lightDir( glm::vec3(0.f, 0.f, 0.f) ),
         _gouraudShaderProgram(nullptr),
-        _gouraudShaderProgramUniformLocations( {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1} ),
+        _gouraudShaderProgramUniformLocations( {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1} ),
         _gouraudShaderProgramAttributeLocations( {-1, -1} ),
         _flatShaderProgram(nullptr),
         _flatShaderProgramUniformLocations( {-1, -1} )
@@ -38,12 +41,37 @@ void A3Engine::handleKeyEvent(const GLint key, const GLint action) {
 
     if(action == GLFW_PRESS) {
         switch( key ) {
+            // camera view 
+            case GLFW_KEY_1:
+                cameraView = 1;
+                _pActiveCamera = _pArcballCam;
+                break;
+            case GLFW_KEY_2:
+                cameraView = 2;
+                // reset free camera
+                _pFreeCam->setPosition(_pArcballCam->getPosition());
+                _pFreeCam->setTheta(_pArcballCam->getTheta() + glm::pi<GLfloat>());
+                _pFreeCam->setPhi(glm::pi<GLfloat>() - _pArcballCam->getPhi());
+                _pFreeCam->recomputeOrientation();
+                _pActiveCamera = _pFreeCam;
+                break;
+            case GLFW_KEY_3:
+                cameraView = 3;
+                _pActiveCamera = _pInspectCam;
+                break;
             case GLFW_KEY_G:
                 grid.showGrid ^= 1;     // toggle the switch
+                break;
+            case GLFW_KEY_L:
+                _characterUnlit ^= 1;     // only has an effect in camera view 3
+                break;
+            case GLFW_KEY_X:
+                _xrayView ^= 1;                 // only has an effect in camera view 2
                 break;
             case GLFW_KEY_F11:
                 _toggleFullscreen();
                 break;
+            // close window
             case GLFW_KEY_Q:
             case GLFW_KEY_ESCAPE:
                 setWindowShouldClose();
@@ -73,12 +101,15 @@ void A3Engine::handleCursorPositionEvent(const glm::vec2 currMousePosition) {
         const glm::vec2 delta = currMousePosition - _mousePosition;
         // if shift is held down
         if( _keys[GLFW_KEY_LEFT_SHIFT] || _keys[GLFW_KEY_RIGHT_SHIFT] ) {
-            _pArcballCam->moveForward(-delta.y * 0.05f);                // drag up = zoom in
+            // drag up = zoom in
+            _pActiveCamera->moveForward(-delta.y * 0.05f);
         }
         // otherwise
         else {
-            // mouse y grows downward: dragging down raises the camera so it looks down at the target (game-style)
-            _pArcballCam->rotate(delta.x * 0.005f, delta.y * 0.005f);
+            // mouse y grows downward: dragging down raises an arcball camera so it looks down at the target (game-style)
+            // the free camera's phi aims the view itself, so dragging down has to lower phi to look down
+            const GLfloat deltaPhi = (cameraView == 2) ? -delta.y : delta.y;
+            _pActiveCamera->rotate(delta.x * 0.005f, deltaPhi * 0.005f);
         }
     }
     // passive motion
@@ -93,7 +124,7 @@ void A3Engine::handleCursorPositionEvent(const glm::vec2 currMousePosition) {
 void A3Engine::handleScrollEvent(const glm::vec2 offset) {
     // update the camera radius in/out
     const GLfloat totChgSq = offset.y;
-    _pArcballCam->moveForward(totChgSq * 0.2f );
+    _pActiveCamera->moveForward(totChgSq * 0.2f); 
 }
 
 //=============================== Engine Setup ===============================//
@@ -142,6 +173,7 @@ void A3Engine::mSetupShaders() {
     _gouraudShaderProgramUniformLocations.materialShininess     = _gouraudShaderProgram->getUniformLocation("materialShininess");
     _gouraudShaderProgramUniformLocations.useTexture            = _gouraudShaderProgram->getUniformLocation("useTexture");
     _gouraudShaderProgramUniformLocations.textureMap            = _gouraudShaderProgram->getUniformLocation("tex0");
+    _gouraudShaderProgramUniformLocations.unlit                 = _gouraudShaderProgram->getUniformLocation("unlit");
     // the sampler reads from texture unit 0, which is where block textures get bound
     _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.textureMap, 0);
     // get attribute locations
@@ -230,9 +262,6 @@ void A3Engine::mSetupScene() {
         return;
     }
 
-    // set up camera
-    _pArcballCam = new ArcballCam(static_cast<GLfloat>(mFramebufferWidth) / static_cast<GLfloat>(mFramebufferHeight));
-
     // set up light info
     constexpr glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
     _lightDir = glm::vec3(-1.0f, -5.0f, -1.0f);
@@ -281,10 +310,33 @@ void A3Engine::mSetupScene() {
 
     character.initialize(shaderInfo);
 
+    
+    // set up cameras
+    GLfloat aspectRatio = static_cast<GLfloat>(mFramebufferWidth) / static_cast<GLfloat>(mFramebufferHeight);
+
+    _pArcballCam = new ArcballCam(aspectRatio);
+    // can zoom in closer than the follow camera, starting with the whole character in view
+    _pInspectCam = new ArcballCam(aspectRatio, 1.5f);
+    _pInspectCam->setRadius(8.0f);
+    _pFreeCam = new CSCI441::FreeCam(aspectRatio, glm::quarter_pi<GLfloat>(), 0.1f, 500.0f);
+
     // start on the inner road, on the side of the island facing the camera
     const glm::vec3 start(0.5f, world.groundHeight(0.5f, -25.5f), -25.5f);
     character.setPosition(start);
+
     _pArcballCam->setTarget(start);
+
+    _pFreeCam->setPosition(_pArcballCam->getPosition());
+    // the arcball angles point from the target to the camera, and the 
+    // free camera's point where it looks, so they are opposite
+    _pFreeCam->setTheta(_pArcballCam->getTheta() + glm::pi<GLfloat>());
+    _pFreeCam->setPhi(glm::pi<GLfloat>() - _pArcballCam->getPhi());
+    _pFreeCam->recomputeOrientation();
+
+    _pInspectCam->setTarget(start);
+
+    // default view option 1
+    _pActiveCamera = _pArcballCam;
 }
 
 void A3Engine::mSetupFonts() {
@@ -330,7 +382,12 @@ void A3Engine::mCleanupTextures() {
 void A3Engine::mCleanupScene() {
     CSCI441::LogUtils::log("[INFO]: ...deleting scene...\n" );
     delete _pArcballCam;
+    delete _pFreeCam;
+    delete _pInspectCam;
     _pArcballCam = nullptr;
+    _pFreeCam = nullptr;
+    _pInspectCam = nullptr;
+    _pActiveCamera = nullptr;
 }
 
 void A3Engine::mCleanupFonts() {
@@ -370,6 +427,9 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
     _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.cameraPosition, camPos);
 
     //---------------------- draw the ground ----------------------//
+    // wireframe blocks let the free camera see through the world
+    const bool wireframe = cameraView == 2 && _xrayView;
+
     for (int t = 0; t < NUM_BLOCK_TYPES; t++) {
         const auto blockType = static_cast<BlockType>(t);
         _setMaterialProperties(World::material(blockType));
@@ -390,19 +450,10 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
                 _gouraudShaderProgramUniformLocations.modelMatrix
             );
 
-            CSCI441::drawSolidCube(1.0);
+            if (wireframe) CSCI441::drawWireCube(1.0);
+            else           CSCI441::drawSolidCube(1.0);
         }
     }
-
-    //---------------------- draw the character ----------------------//
-    _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.useTexture, 0);
-    character.draw([&](const glm::mat4& modelMtx) {
-        _computeAndSendTransformationMatrices(_gouraudShaderProgram, modelMtx, viewMtx, projMtx,
-            _gouraudShaderProgramUniformLocations.mvpMatrix,
-            _gouraudShaderProgramUniformLocations.normalMatrix,
-            _gouraudShaderProgramUniformLocations.modelMatrix
-        );
-    });
 
     // printf("Phi = %f\n", _pArcballCam->getPhi());
     // printf("Theta = %f\n", _pArcballCam->getTheta());
@@ -441,37 +492,79 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
         glDepthFunc(GL_LESS);
         glDepthMask(GL_TRUE);
     }
+
+    //---------------------- draw the character ----------------------//
+    // drawn after the grid, so that the grid's ghost lines don't cover the character
+    _gouraudShaderProgram->useProgram();
+    _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.useTexture, 0);
+    // only the character can be unlit, the blocks stay lit
+    _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.unlit, (cameraView == 3 && _characterUnlit) ? 1 : 0);
+    character.draw([&](const glm::mat4& modelMtx) {
+        _computeAndSendTransformationMatrices(_gouraudShaderProgram, modelMtx, viewMtx, projMtx,
+            _gouraudShaderProgramUniformLocations.mvpMatrix,
+            _gouraudShaderProgramUniformLocations.normalMatrix,
+            _gouraudShaderProgramUniformLocations.modelMatrix
+        );
+    });
+    _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.unlit, 0);
 }
 
 void A3Engine::_updateScene() {
     // seconds since the last update, so that walking speed doesn't depend on fps
     const GLdouble currentTime = glfwGetTime();
-    // capped so that a long frame can't step over a block: 6 * 0.1 is under one cell
+    // capped so that a long frame can't step over a block
     const GLfloat dt = glm::min(static_cast<GLfloat>(currentTime - _lastUpdateTime), 0.1f);
     _lastUpdateTime = currentTime;
-
-    constexpr GLfloat WALK_SPEED = 10.0f;    // units per second
 
     // walk while W/S/A/D are held
     const GLfloat inputMain = (_keys[GLFW_KEY_W] ? 1.0f : 0.0f) - (_keys[GLFW_KEY_S] ? 1.0f : 0.0f);
     const GLfloat inputSide = (_keys[GLFW_KEY_A] ? 1.0f : 0.0f) - (_keys[GLFW_KEY_D] ? 1.0f : 0.0f);
-    if (inputMain != 0.0f || inputSide != 0.0f) {
-        const glm::vec3 forward = _pArcballCam->getForward();
-        const glm::vec3 left = glm::cross(_pArcballCam->getUpVector(), forward);
+   
+    switch( cameraView ) {
+        case 1: {
+            constexpr GLfloat WALK_SPEED = 10.0f;    // units per second
+            if (inputMain != 0.0f || inputSide != 0.0f) {
+                const glm::vec3 forward = _pArcballCam->getForward();
+                const glm::vec3 left = glm::cross(_pArcballCam->getUpVector(), forward);
 
-        // normalized so that diagonals are as fast as straight lines
-        const glm::vec3 direction = glm::normalize(forward * inputMain + left * inputSide);
-        glm::vec3 next = _pArcballCam->getLookAtPoint() + direction * WALK_SPEED * dt;
+                // normalized so that diagonals are as fast as straight lines
+                const glm::vec3 direction = glm::normalize(forward * inputMain + left * inputSide);
+                glm::vec3 next = _pArcballCam->getLookAtPoint() + direction * WALK_SPEED * dt;
 
-        // stay on land, out of houses and trees, and climb at most one block
-        if (world.isWalkable(next.x, next.z, next.y)) {
-            next.y = world.groundHeight(next.x, next.z);
-            _pArcballCam->setTarget(next);
+                // stay on land, out of houses and trees, and climb at most one block
+                if (world.isWalkable(next.x, next.z, next.y)) {
+                    next.y = world.groundHeight(next.x, next.z);
+                    _pArcballCam->setTarget(next);
+                }
+            }
+            character.setPosition(_pArcballCam->getLookAtPoint());
+            character.setRotation(-_pArcballCam->getTheta());
+            break;
         }
-    }
+        case 2: {
+            constexpr GLfloat FLY_SPEED = 20.0f;    // units per second
 
-    character.setPosition(_pArcballCam->getLookAtPoint());
-    character.setRotation(-_pArcballCam->getTheta());
+            _pFreeCam->moveForward(inputMain * FLY_SPEED * dt);
+
+            // normalized because the view direction can tilt up or down, which shortens the cross product
+            const glm::vec3 left = glm::normalize(glm::cross(_pFreeCam->getUpVector(), _pFreeCam->getViewDirection()));
+            _pFreeCam->setPosition(_pFreeCam->getPosition() + left * inputSide * FLY_SPEED * dt);
+            _pFreeCam->recomputeOrientation();
+            break;
+        }
+        case 3: {
+            constexpr GLfloat FOCUS_SPEED = 2.0f;       // units per second
+            constexpr GLfloat MAX_FOCUS_HEIGHT = 5.0f;  // just above the top of the head
+
+            // W/S slide the orbit point up and down the body, so that zooming in works on any part of it
+            _inspectHeight = glm::clamp(_inspectHeight + inputMain * FOCUS_SPEED * dt, 0.0f, MAX_FOCUS_HEIGHT);
+            _pInspectCam->setTarget(_pArcballCam->getLookAtPoint() + glm::vec3(0.0f, _inspectHeight, 0.0f));
+            break;
+        }
+
+        default: break; // suppress CLion warning
+    }
+    
 }
 
 
@@ -511,7 +604,11 @@ void A3Engine::run() {
         if (framebufferWidth > 0 && framebufferHeight > 0 &&
             (framebufferWidth != mFramebufferWidth || framebufferHeight != mFramebufferHeight)) {
             setCurrentFramebufferSize(framebufferWidth, framebufferHeight);
-            _pArcballCam->setAspectRatio(static_cast<GLfloat>(framebufferWidth) / static_cast<GLfloat>(framebufferHeight));
+            // set up cameras
+            GLfloat aspectRatio = static_cast<GLfloat>(mFramebufferWidth) / static_cast<GLfloat>(mFramebufferHeight);
+            _pArcballCam->setAspectRatio(aspectRatio);
+            _pInspectCam->setAspectRatio(aspectRatio);
+            _pFreeCam->setAspectRatio(aspectRatio);       
             CSCI441::FontUtils::setWindowSize(framebufferWidth, framebufferHeight);
             CSCI441::FontUtils::setFontSize(2.0f / static_cast<GLfloat>(framebufferWidth), 2.0f / static_cast<GLfloat>(framebufferHeight));
         }
@@ -520,7 +617,7 @@ void A3Engine::run() {
         glViewport( 0, 0, framebufferWidth, framebufferHeight );
 
         // draw everything to the window
-        _renderScene(_pArcballCam->getViewMatrix(), _pArcballCam->getProjectionMatrix(), _pArcballCam->getPosition());
+        _renderScene(_pActiveCamera->getViewMatrix(), _pActiveCamera->getProjectionMatrix(), _pActiveCamera->getPosition());
         _renderTextOverlay(this->clockFrame(), this->fpsAverage()); // display FPS information on screen
 
         // animate the scene

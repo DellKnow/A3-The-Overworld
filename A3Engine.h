@@ -6,6 +6,7 @@
 #include "Character.h"
 
 #include <CSCI441/Camera.hpp>
+#include <CSCI441/FreeCam.hpp>
 #include <CSCI441/materials.hpp>
 #include <CSCI441/OpenGLEngine.hpp>
 #include <CSCI441/ShaderProgram.hpp>
@@ -97,8 +98,22 @@ private:
 
     //============================ Camera Information ============================//
 
-    /// \desc the fixed camera in our world
+    /// \desc the arcball camera following the character in our world (camera View 1)
     ArcballCam* _pArcballCam;
+    /// \desc the free camera flying in our world (camera View 2)
+    CSCI441::FreeCam* _pFreeCam;
+    /// \desc the arcball camera centered around the character (camera View 3)
+    ArcballCam* _pInspectCam;
+    /// \desc current camera from options above, uses polymorphism 
+    CSCI441::Camera* _pActiveCamera;
+    /// \desc the camera view, default option 1
+    GLint cameraView = 1;
+    /// \desc height above the character's feet that the inspect camera orbits (camera View 3)
+    GLfloat _inspectHeight = 2.5f;
+    /// \desc whether the character is drawn without lighting in camera View 3
+    bool _characterUnlit = true;
+    /// \desc whether the blocks are drawn as wireframe in camera View 2
+    bool _xrayView = false;
 
     //========================= Illumination Information =========================//
 
@@ -159,6 +174,8 @@ private:
         GLint useTexture;
         /// \desc texture sampler (which texture unit to read from)
         GLint textureMap;
+        /// \desc 1 = material color with no lighting, 0 = lit
+        GLint unlit;
     } _gouraudShaderProgramUniformLocations;
     /// \desc stores the locations of all of our shader attributes
     struct GouraudShaderProgramAttributeLocations {
@@ -182,7 +199,7 @@ private:
 
     /// \desc switch between fullscreen and the previous window
     void _toggleFullscreen();
-    
+
     /// \desc sends the material uniforms to the Gouraud Shader Program
     /// \param material material properties to set
     void _setMaterialProperties(const CSCI441::Materials::Material& material) const;

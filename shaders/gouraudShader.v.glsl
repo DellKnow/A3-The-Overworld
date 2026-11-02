@@ -15,6 +15,7 @@ uniform vec4 materialDiffColor;             // the material diffuse color
 uniform vec4 materialSpecColor;             // the material specular color
 uniform vec4 materialAmbColor;              // the material ambient color
 uniform float materialShininess;            // the material shininess
+uniform int unlit;                          // 1 = show the material color with no lighting
 
 // ======================== attribute inputs ===============================//
 layout(location = 0) in vec3 vPos;          // the position of this specific vertex in object space
@@ -63,6 +64,12 @@ void main() {
     // assign the final components to the vertex
     litColor = vec4(ambient + diffuse, 1.0f);
     specColor = vec4(specular, 1.0f);
+
+    // full material color, so that faces turned away from the light stay visible
+    if (unlit == 1) {
+        litColor = vec4(materialDiffColor.rgb, 1.0f);
+        specColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    }
 
     // texture coordinates from the world position, projected along the face's axis:
     if      (abs(N.y) > 0.5) st = worldPos.xz;  // top / bottom faces
