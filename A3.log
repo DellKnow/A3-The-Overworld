@@ -1,4 +1,4 @@
-CSCI441 Log Generated at 23:42:14  2 Nov 2026
+CSCI441 Log Generated at 14:24:59  3 Nov 2026
 [INFO]: Using CSCI441 Library v6.1.3.0
 [INFO]: GLFW v3.5.1 initialized
 [INFO]: GLFW Window created
@@ -130,7 +130,16 @@ CSCI441 Log Generated at 23:42:14  2 Nov 2026
 [INFO]: |   1) type: vec3            name: color         loc:  1 |
 [INFO]: \--------------------------------------------------------/
 
-[INFO]: Successfully loaded texture "assets/textures/classic/water.png" with handle 1
+[INFO]: Successfully loaded texture "assets/textures/classic/snow.png" with handle 1
+[INFO]: Successfully loaded texture "assets/textures/classic/stone.png" with handle 2
+[INFO]: Successfully loaded texture "assets/textures/classic/peak.png" with handle 3
+[INFO]: Successfully loaded texture "assets/textures/classic/road.png" with handle 4
+[INFO]: Successfully loaded texture "assets/textures/classic/wood.png" with handle 5
+[INFO]: Successfully loaded texture "assets/textures/classic/roof.png" with handle 6
+[INFO]: Successfully loaded texture "assets/textures/classic/grass.png" with handle 7
+[INFO]: Successfully loaded texture "assets/textures/classic/trunk.png" with handle 8
+[INFO]: Successfully loaded texture "assets/textures/classic/leaves.png" with handle 9
+[INFO]: Successfully loaded texture "assets/textures/classic/water.png" with handle 10
 [.obj]: -=-=-=-=-=-=-=- BEGIN assets/character/obj_parts/torso.obj Info -=-=-=-=-=-=-=- 
 [.mtl]: -*-*-*-*-*-*-*- BEGIN assets/character/obj_parts/torso.mtl Info -*-*-*-*-*-*-*-
 [.mtl]: Parsing material material_00_19_Brass_buckle properties
@@ -177,7 +186,7 @@ CSCI441 Log Generated at 23:42:14  2 Nov 2026
 [.obj]: Dimensions:	(1.730200, 1.832591, 1.481505)
 [.obj]: ------------
 [2K[.obj]: parsing assets/character/obj_parts/head.obj...\[2K[.obj]: parsing assets/character/obj_parts/head.obj...done!
-[.obj]: Completed in 0.000s
+[.obj]: Completed in 1.000s
 [.obj]: -=-=-=-=-=-=-=-  END assets/character/obj_parts/head.obj Info  -=-=-=-=-=-=-=- 
 
 [.obj]: -=-=-=-=-=-=-=- BEGIN assets/character/obj_parts/arm_l.obj Info -=-=-=-=-=-=-=- 
@@ -445,31 +454,11 @@ CSCI441 Log Generated at 23:42:14  2 Nov 2026
 
 
 [INFO]: Setup complete
-[INFO]: Init Time:    3.017s
-[INFO]: 	GLFW:     2.339s
-[INFO]: 	OpenGL:   0.118s
-[INFO]: 	Shaders:  0.089s
+[INFO]: Init Time:    0.982s
+[INFO]: 	GLFW:     0.255s
+[INFO]: 	OpenGL:   0.119s
+[INFO]: 	Shaders:  0.095s
 [INFO]: 	Buffers:  0.000s
-[INFO]: 	Textures: 0.012s
+[INFO]: 	Textures: 0.043s
 [INFO]: 	Fonts:    0.003s
-[INFO]: 	Scene:    0.454s
-
-[INFO]: Shutting down.......
-[INFO]: ...deleting scene...
-[INFO]: ...deleting Textures
-[INFO]: ...deleting VAOs....
-[INFO]: ...deleting VBOs....
-[INFO]: ...deleting IBOs....
-[INFO]: ...deleting models..
-[INFO]: ...deleting Shaders.
-[INFO]: ...closing window...
-[INFO]: ...closing GLFW.....
-[INFO]: ..shut down complete!
-[INFO]: Shutdown:   0.049s
-[INFO]: 	Scene:    0.002s
-[INFO]: 	Fonts:    0.000s
-[INFO]: 	Textures: 0.002s
-[INFO]: 	Buffers:  0.007s
-[INFO]: 	Shaders:  0.001s
-[INFO]: 	OpenGL:   0.000s
-[INFO]: 	GLFW:     0.034s
+[INFO]: 	Scene:    0.467s

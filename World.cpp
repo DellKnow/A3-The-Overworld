@@ -38,21 +38,20 @@ namespace {
         /* GRASS  */ {{0.25f, 0.55f, 0.20f, 1}, {0.05f, 0.08f, 0.05f, 1},  4.0f, {0.06f, 0.14f, 0.05f, 1}},
         /* TRUNK  */ {{0.35f, 0.22f, 0.12f, 1}, {0.05f, 0.04f, 0.03f, 1},  4.0f, {0.09f, 0.06f, 0.03f, 1}},
         /* LEAVES */ {{0.15f, 0.42f, 0.15f, 1}, {0.10f, 0.15f, 0.10f, 1}, 10.0f, {0.04f, 0.10f, 0.04f, 1}},
-        // the texture supplies the water's color, so diffuse/ambient stay near white; strong specular = sun glint
-        /* WATER  */ {{0.85f, 0.90f, 1.00f, 1}, {0.80f, 0.80f, 0.80f, 1}, 64.0f, {0.30f, 0.32f, 0.38f, 1}},
+        /* WATER  */ {{0.45f, 0.68f, 0.82f, 1}, {0.12f, 0.15f, 0.18f, 1}, 48.0f, {0.08f, 0.12f, 0.16f, 1}},
     };
 
     // texture per block type (nullptr = material color only); indexed like MATERIALS
     constexpr const char* TEXTURE_FILES[NUM_BLOCK_TYPES] = {
-        /* SNOW   */ nullptr,
-        /* STONE  */ nullptr,
-        /* PEAK   */ nullptr,
-        /* ROAD   */ nullptr,
-        /* WOOD   */ nullptr,
-        /* ROOF   */ nullptr,
-        /* GRASS  */ nullptr,
-        /* TRUNK  */ nullptr,
-        /* LEAVES */ nullptr,
+        /* SNOW   */ "assets/textures/classic/snow.png",
+        /* STONE  */ "assets/textures/classic/stone.png",
+        /* PEAK   */ "assets/textures/classic/peak.png",
+        /* ROAD   */ "assets/textures/classic/road.png",
+        /* WOOD   */ "assets/textures/classic/wood.png",
+        /* ROOF   */ "assets/textures/classic/roof.png",
+        /* GRASS  */ "assets/textures/classic/grass.png",
+        /* TRUNK  */ "assets/textures/classic/trunk.png",
+        /* LEAVES */ "assets/textures/classic/leaves.png",
         /* WATER  */ "assets/textures/classic/water.png",
     };
 

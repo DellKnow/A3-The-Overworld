@@ -24,8 +24,11 @@ void main() {
     // if we are looking at the front face of the fragment
 
     // white (1) when untextured, so the material color passes through unchanged
-    vec3 tex = (useTexture == 1) ? texture(tex0, st).rgb : vec3(1.0);
+    vec4 tex = (useTexture == 1) ? texture(tex0, st) : vec4(1.0);
+
+    if (useTexture == 1 && tex.a < 0.5)
+        discard;
 
     // texture tints the lit color, the highlight is added on top in the light's color
-    fragColorOut = vec4(tex * litColor.rgb + specColor.rgb, 1.0);
+    fragColorOut = vec4(tex.rgb * litColor.rgb + specColor.rgb, tex.a);
 }

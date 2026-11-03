@@ -112,6 +112,8 @@ private:
     GLfloat _inspectHeight = 2.5f;
     /// \desc whether the character is drawn without lighting in camera View 3
     bool _characterUnlit = true;
+    /// \desc whether the world is drawn without lighting in camera View 3
+    bool _worldUnlit = false;
     /// \desc whether the blocks are drawn as wireframe in camera View 2
     bool _xrayView = false;
 
@@ -124,6 +126,7 @@ private:
     
     /// \desc world object: builds platform, trees, houses.
     World world;
+    bool toggleTextures = 0;        // turn on or off the textures
     /// \desc world object: builds platform, trees, houses.
     PumpkinCharacter character;
     /// \desc amount of time animation will still play

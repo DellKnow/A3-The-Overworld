@@ -62,11 +62,17 @@ void A3Engine::handleKeyEvent(const GLint key, const GLint action) {
             case GLFW_KEY_G:
                 grid.showGrid ^= 1;     // toggle the switch
                 break;
-            case GLFW_KEY_L:
+            case GLFW_KEY_C:
                 _characterUnlit ^= 1;     // only has an effect in camera view 3
+                break;
+            case GLFW_KEY_L:
+                _worldUnlit ^= 1;           // unlit world
                 break;
             case GLFW_KEY_X:
                 _xrayView ^= 1;                 // only has an effect in camera view 2
+                break;
+            case GLFW_KEY_T:
+                toggleTextures ^= 1;         // toggle textures
                 break;
             case GLFW_KEY_F11:
                 _toggleFullscreen();
@@ -251,7 +257,7 @@ void A3Engine::mSetupTextures() {
     for (int t = 0; t < NUM_BLOCK_TYPES; t++) {
         if (const char* file = World::textureFile(static_cast<BlockType>(t))) {
             // mipmapped far away avoids shimmering
-            _blockTextures[t] = CSCI441::TextureUtils::loadAndRegisterTexture(file, GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST);
+            _blockTextures[t] = CSCI441::TextureUtils::loadAndRegisterTexture(file, GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST);
         }
     }
 }
@@ -427,6 +433,9 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
     _gouraudShaderProgram->useProgram();
     _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.cameraPosition, camPos);
 
+    // world is unlit if _worldUnlit is true
+    _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.unlit, _worldUnlit);
+
     //---------------------- draw the ground ----------------------//
     // wireframe blocks let the free camera see through the world
     const bool wireframe = cameraView == 2 && _xrayView;
@@ -436,8 +445,7 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
         _setMaterialProperties(World::material(blockType));
 
         // textured types sample their image
-        // const GLboolean textured = _blockTextures[t] != 0;
-        const GLboolean textured = 0;
+        const GLboolean textured = _blockTextures[t] != 0 && toggleTextures;
         _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.useTexture, textured ? 1 : 0);
         if (textured) {
             glActiveTexture(GL_TEXTURE0);
@@ -500,7 +508,7 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
     _gouraudShaderProgram->useProgram();
     _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.useTexture, 0);
     // only the character can be unlit, the blocks stay lit
-    _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.unlit, (cameraView == 3 && _characterUnlit) ? 1 : 0);
+    _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.unlit, (cameraView == 3 && _characterUnlit) ? 1 : _worldUnlit);
     character.draw([&](const glm::mat4& modelMtx) {
         _computeAndSendTransformationMatrices(_gouraudShaderProgram, modelMtx, viewMtx, projMtx,
             _gouraudShaderProgramUniformLocations.mvpMatrix,
