@@ -7,6 +7,8 @@
 #include <string>
 #include <glm/gtc/matrix_transform.hpp>
 
+constexpr static GLfloat PI = 3.14159265359;
+
 void PumpkinCharacter::initialize(const ShaderInfo& shaderInfo) {
     // one default Part per PartID, so the enum values index directly into parts
     parts.resize(PART_COUNT);
@@ -68,6 +70,16 @@ void PumpkinCharacter::initialize(const ShaderInfo& shaderInfo) {
     // right leg: hip -> knee -> foot
     parts[LEG_R].children = {KNEE_R};
     parts[KNEE_R].children = {FOOT_R};
+
+    // Lower both arms from the initial T-pose
+    parts[ARM_L].rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
+    parts[ARM_R].rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
+
+    parts[ARM_L].angle = glm::radians(65.0f);
+    parts[ARM_R].angle = glm::radians(-65.0f);
+
+    parts[STAFF].rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
+    parts[STAFF].angle = glm::radians(65.0f);
 }
 
 void PumpkinCharacter::loadOffsets(const char* filename) {
@@ -111,8 +123,53 @@ void PumpkinCharacter::loadOffsets(const char* filename) {
     }
 }
 
-void PumpkinCharacter::update(float dt) {
-    
+void PumpkinCharacter::update(float t) {
+    float swing = sin(t / animationTime * 2.0f * PI);
+    parts[LEG_L].angle = 0.45f * swing;
+    parts[LEG_R].angle = -0.45f * swing;
+
+    parts[ARM_L].angle = glm::radians(65.0f) - 0.30f * swing;
+    parts[ARM_R].angle = glm::radians(-65.0f) + 0.30f * swing;
+
+    parts[KNEE_L].angle =
+        0.35f * std::max(0.0f, -swing);
+
+    parts[KNEE_R].angle =
+        0.35f * std::max(0.0f, swing);
+
+    parts[STAFF].angle = -parts[ARM_R].angle;
+}
+
+void PumpkinCharacter::updateIdle(float t) {
+    float slow = sin(1.2f * t);
+    float slower = sin(0.7f * t);
+    float tiny = sin(2.0f * t);
+
+    // torso: tiny sway
+    parts[TORSO].rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
+    parts[TORSO].angle = glm::radians(2.0f) * slow;
+
+    // head: slight left-right motion
+    parts[HEAD].rotationAxis = glm::vec3(0.0f, 1.0f, 0.0f);
+    parts[HEAD].angle = glm::radians(5.0f) * slower;
+
+    // keep arms dropped, but move a tiny bit
+    parts[ARM_L].rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
+    parts[ARM_R].rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
+
+    parts[ARM_L].angle = glm::radians(65.0f) + glm::radians(4.0f) * slow;
+    parts[ARM_R].angle = glm::radians(-65.0f) - glm::radians(4.0f) * slow;
+
+    // slight elbow motion
+    parts[ELBOW_L].rotationAxis = glm::vec3(1.0f, 0.0f, 0.0f);
+    parts[ELBOW_R].rotationAxis = glm::vec3(1.0f, 0.0f, 0.0f);
+
+    parts[ELBOW_L].angle = glm::radians(6.0f) * tiny;
+    parts[ELBOW_R].angle = glm::radians(-6.0f) * tiny;
+
+    // staff: mostly fixed, very tiny wobble
+    parts[STAFF].rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
+    parts[STAFF].angle = -parts[ARM_R].angle + glm::radians(3.0f) * tiny;
 }
 
 void PumpkinCharacter::draw(const std::function<void(const glm::mat4&)>& sendModelMtx) const {

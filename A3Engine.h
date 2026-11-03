@@ -126,6 +126,9 @@ private:
     World world;
     /// \desc world object: builds platform, trees, houses.
     PumpkinCharacter character;
+    /// \desc amount of time animation will still play
+    GLfloat characterAnimationTimer = 0;
+    GLfloat characterIdleTimer = 0;
     /// \checker whether to draw the grid
     struct Grid {
         bool showGrid = true;

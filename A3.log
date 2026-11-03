@@ -1,4 +1,4 @@
-CSCI441 Log Generated at 01:07:18  2 Nov 2026
+CSCI441 Log Generated at 23:42:14  2 Nov 2026
 [INFO]: Using CSCI441 Library v6.1.3.0
 [INFO]: GLFW v3.5.1 initialized
 [INFO]: GLFW Window created
@@ -380,7 +380,7 @@ CSCI441 Log Generated at 01:07:18  2 Nov 2026
 [.obj]: Dimensions:	(0.342713, 0.901045, 0.337507)
 [.obj]: ------------
 [2K[.obj]: parsing assets/character/obj_parts/leg_r.obj...done!
-[.obj]: Completed in 1.000s
+[.obj]: Completed in 0.000s
 [.obj]: -=-=-=-=-=-=-=-  END assets/character/obj_parts/leg_r.obj Info  -=-=-=-=-=-=-=- 
 
 [.obj]: -=-=-=-=-=-=-=- BEGIN assets/character/obj_parts/knee_r.obj Info -=-=-=-=-=-=-=- 
@@ -445,14 +445,14 @@ CSCI441 Log Generated at 01:07:18  2 Nov 2026
 
 
 [INFO]: Setup complete
-[INFO]: Init Time:    0.943s
-[INFO]: 	GLFW:     0.285s
-[INFO]: 	OpenGL:   0.149s
-[INFO]: 	Shaders:  0.084s
+[INFO]: Init Time:    3.017s
+[INFO]: 	GLFW:     2.339s
+[INFO]: 	OpenGL:   0.118s
+[INFO]: 	Shaders:  0.089s
 [INFO]: 	Buffers:  0.000s
-[INFO]: 	Textures: 0.011s
+[INFO]: 	Textures: 0.012s
 [INFO]: 	Fonts:    0.003s
-[INFO]: 	Scene:    0.410s
+[INFO]: 	Scene:    0.454s
 
 [INFO]: Shutting down.......
 [INFO]: ...deleting scene...
@@ -465,11 +465,11 @@ CSCI441 Log Generated at 01:07:18  2 Nov 2026
 [INFO]: ...closing window...
 [INFO]: ...closing GLFW.....
 [INFO]: ..shut down complete!
-[INFO]: Shutdown:   0.082s
-[INFO]: 	Scene:    0.001s
+[INFO]: Shutdown:   0.049s
+[INFO]: 	Scene:    0.002s
 [INFO]: 	Fonts:    0.000s
-[INFO]: 	Textures: 0.001s
-[INFO]: 	Buffers:  0.002s
+[INFO]: 	Textures: 0.002s
+[INFO]: 	Buffers:  0.007s
 [INFO]: 	Shaders:  0.001s
 [INFO]: 	OpenGL:   0.000s
-[INFO]: 	GLFW:     0.077s
+[INFO]: 	GLFW:     0.034s

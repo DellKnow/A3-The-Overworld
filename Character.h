@@ -85,6 +85,10 @@ struct Part {
     float angle = 0.0f;                         // rotation angle for the body part
 
     std::vector<int> children;                  // indices from std::vector<Part> in PumpkinCharacter
+
+    void resetAngle() {
+        angle = 0.0f;                           // reset the angle of the part
+    }
 };
 
 class PumpkinCharacter {
@@ -96,6 +100,8 @@ private:
     float rotation = 0.0f;      // rotation of the pumpkin character (axes defined by body parts)
     glm::vec3 scale{1.0f};      // scaled pumpkin character if needed
 
+    float animationTime = 1.0;                  // in seconds the phase of animation
+
     void loadOffsets(const char* filename);         // read each part's offset from parts.csv
 
     // draw a part and its children; parentMtx is the parent's model matrix
@@ -104,9 +110,13 @@ private:
 public:
     void initialize(const ShaderInfo& shaderInfo);  // initialize the pumpkin character
     void setPosition(const glm::vec3& newPosition) { position = newPosition; }  // place the character in the world
-    void setRotation(const float newRotation) { rotation = newRotation; } // rotate the character in the world
+    void setRotation(const float& newRotation) { rotation = newRotation; } // rotate the character in the world
+    void setScale(const glm::vec3& newScale) { scale = newScale; } // scale the character in the world
     void moveCharacter(const glm::vec3& dir) { position += dir; }   // move the character in the world in the given direction
+    float getAnimationTime() { return animationTime; }      // return the animation time of the character
+    void updateIdle(float t);                       // idle animation of the character
     void update(float dt);                          // update the character position given time
+    void reset();                                   // reset the character to the initial position
     // draw the character; sendModelMtx is called with each part's model matrix before it is drawn
     void draw(const std::function<void(const glm::mat4&)>& sendModelMtx) const;
 };

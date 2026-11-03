@@ -309,6 +309,7 @@ void A3Engine::mSetupScene() {
     };
 
     character.initialize(shaderInfo);
+    // character.setScale(glm::vec3{0.4f});
 
     
     // set up cameras
@@ -435,7 +436,8 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
         _setMaterialProperties(World::material(blockType));
 
         // textured types sample their image
-        const GLboolean textured = _blockTextures[t] != 0;
+        // const GLboolean textured = _blockTextures[t] != 0;
+        const GLboolean textured = 0;
         _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.useTexture, textured ? 1 : 0);
         if (textured) {
             glActiveTexture(GL_TEXTURE0);
@@ -516,6 +518,18 @@ void A3Engine::_updateScene() {
     const GLfloat dt = glm::min(static_cast<GLfloat>(currentTime - _lastUpdateTime), 0.1f);
     _lastUpdateTime = currentTime;
 
+    // printf("%f\n", characterAnimationTimer);
+    if (characterAnimationTimer > 0) {
+        characterAnimationTimer = std::max(characterAnimationTimer - dt, 0.0f);
+        character.update(characterAnimationTimer);
+    }
+
+    characterIdleTimer += dt;
+
+    if (characterIdleTimer >= 2.0) {
+        character.updateIdle(characterIdleTimer - 2.0);
+    }
+
     // walk while W/S/A/D are held
     const GLfloat inputMain = (_keys[GLFW_KEY_W] ? 1.0f : 0.0f) - (_keys[GLFW_KEY_S] ? 1.0f : 0.0f);
     const GLfloat inputSide = (_keys[GLFW_KEY_A] ? 1.0f : 0.0f) - (_keys[GLFW_KEY_D] ? 1.0f : 0.0f);
@@ -536,6 +550,11 @@ void A3Engine::_updateScene() {
                     next.y = world.groundHeight(next.x, next.z);
                     _pArcballCam->setTarget(next);
                 }
+
+                if (characterAnimationTimer == 0) {
+                    characterAnimationTimer = character.getAnimationTime();
+                }
+                characterIdleTimer = 0.0f;
             }
             character.setPosition(_pArcballCam->getLookAtPoint());
             character.setRotation(-_pArcballCam->getTheta());
