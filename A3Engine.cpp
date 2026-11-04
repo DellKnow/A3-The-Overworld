@@ -64,6 +64,9 @@ void A3Engine::handleKeyEvent(const GLint key, const GLint action) {
                 cameraView = 4;
                 _pActiveCamera = _pInspectCam;
                 break;
+            case GLFW_KEY_5:
+                _showInset ^= 1;        // toggle secondary view 
+                break;
             case GLFW_KEY_G:
                 grid.showGrid ^= 1;     // toggle the switch
                 break;
@@ -121,6 +124,8 @@ void A3Engine::handleCursorPositionEvent(const glm::vec2 currMousePosition) {
             // the free camera's phi aims the view itself, so dragging down has to lower phi to look down
             const GLfloat deltaPhi = (cameraView == 2 || cameraView == 3) ? -delta.y : delta.y;
             _pActiveCamera->rotate(delta.x * 0.005f, deltaPhi * 0.005f);
+            if (cameraView != 1) _pArcballCam->rotate(delta.x * 0.005f, deltaPhi * 0.005f);
+            if (cameraView != 2) _pFirstCam->rotate(delta.x * 0.005f, deltaPhi * 0.005f);
         }
     }
     // passive motion
@@ -693,6 +698,30 @@ void A3Engine::run() {
 
         // draw everything to the window
         _renderScene(_pActiveCamera->getViewMatrix(), _pActiveCamera->getProjectionMatrix(), _pActiveCamera->getPosition());
+        
+        // draw the opposite camera in the top-right quarter
+        if (_showInset && (cameraView == 1 || cameraView == 2)) {
+            const GLint x = 3 * framebufferWidth / 4, y = 3 * framebufferHeight / 4;
+            const GLsizei w = framebufferWidth - x, h = framebufferHeight - y;
+
+            // clear only the secondary viewport
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(x, y, w, h);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glDisable(GL_SCISSOR_TEST);
+
+            glViewport(x, y, w, h);
+
+            if (cameraView == 1) {
+                _renderScene(_pFirstCam->getViewMatrix(), _pFirstCam->getProjectionMatrix(), _pFirstCam->getPosition());
+            } else {
+                _renderScene(_pArcballCam->getViewMatrix(), _pArcballCam->getProjectionMatrix(), _pArcballCam->getPosition());
+            }
+
+            // restore full-screen viewport
+            glViewport(0, 0, framebufferWidth, framebufferHeight);
+        }
+        
         _renderTextOverlay(this->clockFrame(), this->fpsAverage()); // display FPS information on screen
 
         // animate the scene

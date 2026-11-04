@@ -118,7 +118,9 @@ private:
     bool _worldUnlit = false;
     /// \desc whether the blocks are drawn as wireframe in camera View 3
     bool _xrayView = false;
-
+    /// \desc where there is secondary camera in the top-right quarter (toggle with 5)
+    bool _showInset = false;
+    
     //========================= Illumination Information =========================//
 
     /// \desc direction of the light for directional or spotlight
