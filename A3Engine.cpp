@@ -257,7 +257,7 @@ void A3Engine::mSetupTextures() {
     for (int t = 0; t < NUM_BLOCK_TYPES; t++) {
         if (const char* file = World::textureFile(static_cast<BlockType>(t))) {
             // mipmapped far away avoids shimmering
-            _blockTextures[t] = CSCI441::TextureUtils::loadAndRegisterTexture(file, GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST);
+            _blockTextures[t] = CSCI441::TextureUtils::loadAndRegisterTexture(file, GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
         }
     }
 }
@@ -442,10 +442,11 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
 
     for (int t = 0; t < NUM_BLOCK_TYPES; t++) {
         const auto blockType = static_cast<BlockType>(t);
-        _setMaterialProperties(World::material(blockType));
 
         // textured types sample their image
         const GLboolean textured = _blockTextures[t] != 0 && toggleTextures;
+        _setMaterialProperties(World::material(blockType, textured));
+        
         _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.useTexture, textured ? 1 : 0);
         if (textured) {
             glActiveTexture(GL_TEXTURE0);
@@ -460,8 +461,9 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
                 _gouraudShaderProgramUniformLocations.modelMatrix
             );
 
-            if (wireframe) CSCI441::drawWireCube(1.0);
-            else           CSCI441::drawSolidCube(1.0);
+            if (wireframe)              CSCI441::drawWireCube(1.0);
+            else if (textured)          CSCI441::drawSolidCubeFlat(1.0);
+            else                        CSCI441::drawSolidCube(1.0);
         }
     }
 

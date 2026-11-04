@@ -25,7 +25,7 @@ public:
     void build();
 
     const std::vector<Block>& blocks(BlockType t) const { return _blocks[static_cast<int>(t)]; }
-    static const CSCI441::Materials::Material& material(BlockType t);
+    static const CSCI441::Materials::Material& material(BlockType t, bool textured = 0);
     /// \desc texture image for a block type, or nullptr if it is drawn with its material color only
     static const char* textureFile(BlockType t);
 

@@ -39,7 +39,10 @@ namespace {
         /* TRUNK  */ {{0.35f, 0.22f, 0.12f, 1}, {0.05f, 0.04f, 0.03f, 1},  4.0f, {0.09f, 0.06f, 0.03f, 1}},
         /* LEAVES */ {{0.15f, 0.42f, 0.15f, 1}, {0.10f, 0.15f, 0.10f, 1}, 10.0f, {0.04f, 0.10f, 0.04f, 1}},
         /* WATER  */ {{0.45f, 0.68f, 0.82f, 1}, {0.12f, 0.15f, 0.18f, 1}, 48.0f, {0.08f, 0.12f, 0.16f, 1}},
+
     };
+
+    constexpr CSCI441::Materials::Material defaultMaterial = {{0.65f, 0.65f, 0.65f, 1}, {0.02f, 0.02f, 0.02f, 1}, 8.0f, {0.35f, 0.35f, 0.35f, 1}};
 
     // texture per block type (nullptr = material color only); indexed like MATERIALS
     constexpr const char* TEXTURE_FILES[NUM_BLOCK_TYPES] = {
@@ -59,8 +62,9 @@ namespace {
     constexpr GLfloat ISLAND_RZ = 32.0f;   // ellipse radius along z
 }
 
-const CSCI441::Materials::Material& World::material(const BlockType t) {
-    return MATERIALS[static_cast<int>(t)];
+// if textured is false use values above, otherwise set default diffuse, specular, ambient 
+const CSCI441::Materials::Material& World::material(const BlockType t, bool textured) {
+    return textured ? defaultMaterial : MATERIALS[static_cast<int>(t)];
 }
 
 const char* World::textureFile(const BlockType t) {

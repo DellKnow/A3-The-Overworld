@@ -2,3 +2,5 @@
 build/
 *.pdf
 *.tex
+.DS_Store
+assets/textures/Default-Java-java-latest/
