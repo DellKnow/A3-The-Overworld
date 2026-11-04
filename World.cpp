@@ -1,30 +1,5 @@
 #include "World.h"
 #include <cmath>
-#include <random>
-
-namespace {
-    /// \brief Simple helper class to return a random number between 0.0f and 1.0f.
-    class RandomGenerator {
-    public:
-        /// \brief generates a random value
-        /// \returns random GLfloat within the inclusive range [0.0f, 1.0f]
-        static GLfloat getRand() { return _dist( _rng ); }
-
-        // do not allow an object to be copied nor moved
-        RandomGenerator(RandomGenerator&) = delete;
-        RandomGenerator& operator=(RandomGenerator&) = delete;
-        RandomGenerator(RandomGenerator&&) = delete;
-        RandomGenerator& operator=(RandomGenerator&&) = delete;
-    private:
-        // do not allow an object to be externally created
-        RandomGenerator() {};
-        static std::mt19937 _rng;
-        static std::uniform_real_distribution<GLfloat> _dist;
-    };
-
-    std::mt19937 RandomGenerator::_rng = std::mt19937( std::random_device{}() );
-    std::uniform_real_distribution<GLfloat> RandomGenerator::_dist = std::uniform_real_distribution<GLfloat>( 0.0f, std::nextafter( 1.0f, 2.0f ) );
-}
 
 namespace {
     // {diffuse}, {specular}, shininess, {ambient}

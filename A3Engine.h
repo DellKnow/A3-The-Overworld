@@ -130,7 +130,11 @@ private:
     
     /// \desc world object: builds platform, trees, houses.
     World world;
-    bool toggleTextures = 0;        // turn on or off the textures
+    /// \desc cloud objects.
+    static constexpr int NUM_CLOUDS = 50;
+    std::array<Cloud, NUM_CLOUDS> _clouds;
+    /// \desc turn on or off the textures
+    bool toggleTextures = 0;        
     /// \desc world object: builds platform, trees, houses.
     PumpkinCharacter character;
     /// \desc amount of time animation will still play

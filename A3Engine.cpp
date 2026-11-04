@@ -167,7 +167,7 @@ void A3Engine::mSetupOpenGL() {
     glEnable(GL_BLEND);									            // enable blending
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	            // use one minus blending equation
 
-    glClearColor( 0.4f, 0.4f, 0.4f, 1.0f );	// clear the frame buffer to gray
+    glClearColor(0.48f, 0.70f, 0.94f, 1.0f);	                    // clear the frame buffer to gray
 
     glFrontFace(GL_CCW);                                            // the front faces are CCW
     glCullFace(GL_BACK);                                            // cull the back faces
@@ -302,6 +302,12 @@ void A3Engine::mSetupScene() {
         grid.gridPoints.emplace_back(k, Y,  World::HALF);
         grid.gridPoints.emplace_back(-World::HALF, Y, k);   // line along x
         grid.gridPoints.emplace_back( World::HALF, Y, k);
+    }
+
+    // generate random clouds once
+    for (auto& cloud : _clouds) {
+        cloud.position = glm::vec3(RandomGenerator::getRand() * 180.0f - 90.0f, 25.0f + RandomGenerator::getRand() * 20.0f, RandomGenerator::getRand() * 180.0f - 90.0f);
+        cloud.size = glm::vec2(6.0f + RandomGenerator::getRand() * 12.0f, 3.0f + RandomGenerator::getRand() * 7.0f);
     }
 
     glGenVertexArrays(1, &grid.vao);
@@ -540,6 +546,23 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
         // restore normal depth state for everything after (text, later the corner viewport)
         glDepthFunc(GL_LESS);
         glDepthMask(GL_TRUE);
+    }
+
+    //---------------------- draw the clouds ----------------------//
+    _flatShaderProgram->useProgram();
+    _flatShaderProgram->setProgramUniform(_flatShaderProgramUniformLocations.color, glm::vec3(0.95f, 0.95f, 1.0f));
+
+    constexpr float CLOUD_SPEED = 2.0f;
+    constexpr float CLOUD_WIDTH = 180.0f;
+
+    for (const auto& cloud : _clouds) {
+        // move clouds cyclically along X
+        float x = fmod(cloud.position.x + CLOUD_WIDTH / 2.0f + glfwGetTime() * CLOUD_SPEED, CLOUD_WIDTH) - CLOUD_WIDTH / 2.0f;
+        glm::vec3 pos(x, cloud.position.y, cloud.position.z);
+        glm::mat4 modelMtx = glm::scale(glm::translate(glm::mat4(1.0f), pos), glm::vec3(cloud.size.x, 0.4f, cloud.size.y));
+
+        _computeAndSendTransformationMatrices(_flatShaderProgram, modelMtx, viewMtx, projMtx, _flatShaderProgramUniformLocations.mvpMatrix);
+        CSCI441::drawSolidCubeFlat(1.0f);
     }
 
     //---------------------- draw the character ----------------------//
