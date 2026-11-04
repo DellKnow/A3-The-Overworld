@@ -134,6 +134,8 @@ private:
     /// \desc amount of time animation will still play
     GLfloat characterAnimationTimer = 0;
     GLfloat characterIdleTimer = 0;
+    /// \desc current time
+    GLdouble currentTime = 0;   
     /// \checker whether to draw the grid
     struct Grid {
         bool showGrid = true;
@@ -184,6 +186,10 @@ private:
         GLint textureMap;
         /// \desc 1 = material color with no lighting, 0 = lit
         GLint unlit;
+        /// \desc 1 = if water, 0 = not a water
+        GLint isWater;
+        /// \desc current time
+        GLint time;
     } _gouraudShaderProgramUniformLocations;
     /// \desc stores the locations of all of our shader attributes
     struct GouraudShaderProgramAttributeLocations {

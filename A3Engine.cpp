@@ -187,6 +187,8 @@ void A3Engine::mSetupShaders() {
     _gouraudShaderProgramUniformLocations.useTexture            = _gouraudShaderProgram->getUniformLocation("useTexture");
     _gouraudShaderProgramUniformLocations.textureMap            = _gouraudShaderProgram->getUniformLocation("tex0");
     _gouraudShaderProgramUniformLocations.unlit                 = _gouraudShaderProgram->getUniformLocation("unlit");
+    _gouraudShaderProgramUniformLocations.isWater               = _gouraudShaderProgram->getUniformLocation("isWater");
+    _gouraudShaderProgramUniformLocations.time                  = _gouraudShaderProgram->getUniformLocation("time");
     // the sampler reads from texture unit 0, which is where block textures get bound
     _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.textureMap, 0);
     // get attribute locations
@@ -469,11 +471,19 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
         const GLboolean textured = _blockTextures[t] != 0 && toggleTextures;
         _setMaterialProperties(World::material(blockType, textured));
         
+        const GLboolean isWater = blockType == BlockType::WATER;
         _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.useTexture, textured ? 1 : 0);
+        _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.isWater, isWater);
+        
         if (textured) {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, _blockTextures[t]);
         }
+
+        if (isWater) {
+            _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.time, (GLfloat)currentTime);
+        }
+
         for (const Block& block : world.blocks(blockType)) {
             // move the unit cube to the block's center, then stretch it
             const glm::mat4 modelMtx = glm::scale(glm::translate(glm::mat4(1.0f), block.position), block.scale);
@@ -547,7 +557,7 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
 
 void A3Engine::_updateScene() {
     // seconds since the last update, so that walking speed doesn't depend on fps
-    const GLdouble currentTime = glfwGetTime();
+    currentTime = glfwGetTime();
     // capped so that a long frame can't step over a block
     const GLfloat dt = glm::min(static_cast<GLfloat>(currentTime - _lastUpdateTime), 0.1f);
     _lastUpdateTime = currentTime;
