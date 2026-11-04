@@ -58,7 +58,7 @@ namespace {
         /* WATER  */ "assets/textures/classic/water.png",
     };
 
-    constexpr GLfloat ISLAND_RX = 48.0f;   // ellipse radius along x
+    constexpr GLfloat ISLAND_RX = 60.0f;   // ellipse radius along x
     constexpr GLfloat ISLAND_RZ = 32.0f;   // ellipse radius along z
 }
 
@@ -127,7 +127,7 @@ void World::build() {
             for (int dj = -1; dj <= 1; dj++) {
                 const int ci = i + di, cj = j + dj;
                 if (ci >= 0 && ci < SIZE && cj >= 0 && cj < SIZE) {
-                    allSnow  &= _material[ci][cj] == BlockType::SNOW;
+                    allSnow &= _material[ci][cj] == BlockType::SNOW;
                 }
             }
         }
@@ -145,11 +145,18 @@ GLfloat World::groundHeight(const GLfloat x, const GLfloat z) const {
 }
 
 bool World::isWalkable(const GLfloat x, const GLfloat z, const GLfloat currentHeight) const {
+    // prevent being too close to the object
+    constexpr GLfloat R = 0.5;
+    constexpr GLfloat dir[4] = {-R, R};
     int i, j;
-    if (!_toCell(x, z, i, j))   return false;                 // off the grid (rubric: stay on it)
-    if (_heights[i][j] == 0)    return false;                 // water
-    if (_solid[i][j])           return false;                 // house or tree
-    return _heights[i][j] - currentHeight <= 1.0f;            // can climb at most one block
+    auto check = [&](GLfloat x, GLfloat z) {
+        if (!_toCell(x, z, i, j))   return false;                 // off the grid
+        if (_heights[i][j] == 0)    return false;                 // water
+        if (_solid[i][j])           return false;                 // house or tree
+        return _heights[i][j] - currentHeight <= 1.0f;            // can climb at most one block   
+    };
+    for (int d : dir) if (!check(x, z + d) || !check(x + d, z)) return false;
+    return check(x, z);
 }
 
 void World::_addHouse(const int i, const int j) {
@@ -196,4 +203,32 @@ void World::_addTree(const int i, const int j) {
         for (int dj = -1; dj <= 1; dj++)
             _material[i + di][j + dj] = BlockType::LEAVES; 
     _material[i][j] = BlockType::TRUNK;
+}
+
+glm::vec3 World::getValidPosition(int R) {
+    for (int attempts = 0; attempts < 1000; attempts++) {
+        const int i = std::min(static_cast<int>(RandomGenerator::getRand() * SIZE), SIZE - 1);
+        const int j = std::min(static_cast<int>(RandomGenerator::getRand() * SIZE), SIZE - 1);
+
+        // the whole RxR must be open snow or road
+        bool allGood = 1;
+        for (int di = -R; di <= R; di++) {
+            for (int dj = -R; dj <= R; dj++) {
+                const int ci = i + di, cj = j + dj;
+                if (ci >= 0 && ci < SIZE && cj >= 0 && cj < SIZE) {
+                    allGood &= _material[ci][cj] == BlockType::SNOW || _material[ci][cj] == BlockType::ROAD;
+                } else {
+                    allGood = false;
+                }
+            }
+        }
+        if (allGood) {
+            const float x = i - HALF + 0.5f;
+            const float z = j - HALF + 0.5f;
+
+            return glm::vec3(x, groundHeight(x, z), z);
+        }
+    }
+    fprintf(stderr, "ERROR: No cell was found in _getValidPosition\n");
+    return glm::vec3(0.0f);
 }

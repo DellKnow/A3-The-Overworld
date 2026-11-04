@@ -49,6 +49,9 @@ public:
     glm::vec3 getForward() const {
         return glm::vec3(-glm::sin(mCameraTheta), 0.0f, glm::cos(mCameraTheta));
     }
+    glm::vec3 getDirectionToTarget() const {
+        return mCameraLookAtPoint - mCameraPosition;
+    }
 
 private:
     GLfloat _minRadius;                         // closest the camera can zoom in

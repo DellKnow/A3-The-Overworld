@@ -33,6 +33,10 @@ public:
     GLfloat groundHeight(GLfloat x, GLfloat z) const;
     /// \desc can the hero stand at (x, z) when his feet are at currentHeight
     bool isWalkable(GLfloat x, GLfloat z, GLfloat currentHeight) const;
+    // get a random valid position in the world
+    // the position should be on the ground
+    // not adjacent to any solid within R
+    glm::vec3 getValidPosition(int R = 1);
 
 private:
     int  _heights[SIZE][SIZE] = {};                 // 0 = water
