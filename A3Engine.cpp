@@ -4,6 +4,7 @@
 #include <CSCI441/objects.hpp>
 #include <CSCI441/TextureUtils.hpp>
 
+#include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -124,8 +125,6 @@ void A3Engine::handleCursorPositionEvent(const glm::vec2 currMousePosition) {
             // the free camera's phi aims the view itself, so dragging down has to lower phi to look down
             const GLfloat deltaPhi = (cameraView == 2 || cameraView == 3) ? -delta.y : delta.y;
             _pActiveCamera->rotate(delta.x * 0.005f, deltaPhi * 0.005f);
-            if (cameraView != 1) _pArcballCam->rotate(delta.x * 0.005f, deltaPhi * 0.005f);
-            if (cameraView != 2) _pFirstCam->rotate(delta.x * 0.005f, deltaPhi * 0.005f);
         }
     }
     // passive motion
@@ -464,7 +463,7 @@ void A3Engine::_basicRenderScene(const glm::mat4& viewMtx, const glm::mat4& proj
     }
 }
 
-void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, const glm::vec3& camPos) const {
+void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, const glm::vec3& camPos, const bool firstPerson) const {
     _gouraudShaderProgram->useProgram();
     _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.cameraPosition, camPos);
 
@@ -571,7 +570,7 @@ void A3Engine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, 
     _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.useTexture, 0);
     // only the character can be unlit, the blocks stay lit
     _gouraudShaderProgram->setProgramUniform(_gouraudShaderProgramUniformLocations.unlit, (cameraView == 4 && _characterUnlit) ? 1 : _worldUnlit);
-    if (cameraView != 2) {
+    if (firstPerson != 1) {
         character.draw([&](const glm::mat4& modelMtx) {
             _computeAndSendTransformationMatrices(_gouraudShaderProgram, modelMtx, viewMtx, projMtx,
                 _gouraudShaderProgramUniformLocations.mvpMatrix,
@@ -610,16 +609,20 @@ void A3Engine::_updateScene() {
         case 1:
         case 2: {
             constexpr GLfloat WALK_SPEED = 10.0f;    // units per second
-            if (inputMain != 0.0f || inputSide != 0.0f) {
-                glm::vec3 forward = cameraView == 2 ? _pFirstCam->getViewDirection() : _pArcballCam->getForward();
-                forward.y = 0.0f;
-                forward = glm::normalize(forward);
+            constexpr GLfloat TURN_SPEED = 2.0f;     // radians per second
 
-                const glm::vec3 left = glm::cross(_pArcballCam->getUpVector(), forward);
+            if (inputSide != 0.0f) {
+                const GLfloat turn = inputSide * TURN_SPEED * dt;
+                _characterHeading += turn;
+                _pFirstCam->setTheta(_pFirstCam->getTheta() - turn);
+                _pFirstCam->recomputeOrientation();
+                characterIdleTimer = 0.0f;
+            }
 
-                // normalized so that diagonals are as fast as straight lines
-                const glm::vec3 direction = glm::normalize(forward * inputMain + left * inputSide);
-                glm::vec3 next = _pArcballCam->getLookAtPoint() + direction * WALK_SPEED * dt;
+            // W/S move along the character's heading
+            if (inputMain != 0.0f) {
+                const glm::vec3 forward(glm::sin(_characterHeading), 0.0f, glm::cos(_characterHeading));
+                glm::vec3 next = _pArcballCam->getLookAtPoint() + forward * inputMain * WALK_SPEED * dt;
 
                 // stay on land, out of houses and trees, and climb at most one block
                 if (world.isWalkable(next.x, next.z, next.y)) {
@@ -632,13 +635,12 @@ void A3Engine::_updateScene() {
                 }
                 characterIdleTimer = 0.0f;
             }
-            character.setPosition(_pArcballCam->getLookAtPoint());
-            character.setRotation(cameraView == 2 ? glm::pi<GLfloat>() - _pFirstCam->getTheta() : -_pArcballCam->getTheta());
 
-            // keep first-person camera in front of the character
-            glm::vec3 firstForward = _pFirstCam->getViewDirection();
-            firstForward.y = 0.0f;
-            firstForward = glm::normalize(firstForward);
+            character.setPosition(_pArcballCam->getLookAtPoint());
+            character.setRotation(_characterHeading);
+
+            // keep first-person camera attached to the character's front
+            const glm::vec3 firstForward(glm::sin(_characterHeading), 0.0f, glm::cos(_characterHeading));
             _pFirstCam->setPosition(_pArcballCam->getLookAtPoint() + glm::vec3(0.0f, 2.5f, 0.0f) + firstForward * 1.2f);
             _pFirstCam->recomputeOrientation();
             break;
@@ -720,7 +722,7 @@ void A3Engine::run() {
         glViewport( 0, 0, framebufferWidth, framebufferHeight );
 
         // draw everything to the window
-        _renderScene(_pActiveCamera->getViewMatrix(), _pActiveCamera->getProjectionMatrix(), _pActiveCamera->getPosition());
+        _renderScene(_pActiveCamera->getViewMatrix(), _pActiveCamera->getProjectionMatrix(), _pActiveCamera->getPosition(), cameraView == 2);
         
         // draw the opposite camera in the top-right quarter
         if (_showInset && (cameraView == 1 || cameraView == 2)) {
@@ -735,10 +737,19 @@ void A3Engine::run() {
 
             glViewport(x, y, w, h);
 
+            const glm::vec3 target = _pArcballCam->getLookAtPoint();
+            const glm::vec3 forward(glm::sin(_characterHeading), 0.0f, glm::cos(_characterHeading));
+
             if (cameraView == 1) {
-                _renderScene(_pFirstCam->getViewMatrix(), _pFirstCam->getProjectionMatrix(), _pFirstCam->getPosition());
+                // first-person inset, looking along the character's heading
+                const glm::vec3 insetPos = target + glm::vec3(0.0f, 2.5f, 0.0f) + forward * 1.2f;
+                const glm::mat4 insetView = glm::lookAt(insetPos, insetPos + forward, glm::vec3(0.0f, 1.0f, 0.0f));
+                _renderScene(insetView, _pFirstCam->getProjectionMatrix(), insetPos, true);
             } else {
-                _renderScene(_pArcballCam->getViewMatrix(), _pArcballCam->getProjectionMatrix(), _pArcballCam->getPosition());
+                // third-person inset, fixed behind the character
+                const glm::vec3 insetPos = target - forward * 10.0f + glm::vec3(0.0f, 4.0f, 0.0f);
+                const glm::mat4 insetView = glm::lookAt(insetPos, target + glm::vec3(0.0f, 2.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+                _renderScene(insetView, _pArcballCam->getProjectionMatrix(), insetPos, false);
             }
 
             // restore full-screen viewport

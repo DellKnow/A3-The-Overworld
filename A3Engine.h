@@ -68,7 +68,7 @@ private:
     /// \param viewMtx the current view matrix for our camera
     /// \param projMtx the current projection matrix for our camera
     /// \param camPos  the current position of the camera
-    void _renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, const glm::vec3& camPos) const;
+    void _renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, const glm::vec3& camPos, const bool firstPerson = 0) const;
     void _basicRenderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx, const glm::vec3& camPos) const;
     /// \desc handles moving our FreeCam as determined by keyboard input
     void _updateScene();
@@ -137,6 +137,7 @@ private:
     bool toggleTextures = 0;        
     /// \desc world object: builds platform, trees, houses.
     PumpkinCharacter character;
+    GLfloat _characterHeading = 0.0f;
     /// \desc amount of time animation will still play
     GLfloat characterAnimationTimer = 0;
     GLfloat characterIdleTimer = 0;
