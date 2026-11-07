@@ -5,9 +5,56 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <algorithm>
+#include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 
-constexpr static GLfloat PI = 3.14159265359;
+//=============================== Animation tuning ===============================//
+// angles are in radians, distances in model units (before setScale)
+namespace {
+    constexpr float WALK_BLEND_SPEED = 10.0f;   // how fast walk blends in/out
+    constexpr float IDLE_BLEND_SPEED = 2.0f;    // how fast idle motion fades in/out
+    constexpr float IDLE_DELAY = 2.0f;          // seconds standing still before idling
+
+    // rest pose
+    constexpr float LEFT_ARM_DOWN = 1.22f;      // ~70 deg down from the T-pose
+    constexpr float LEFT_ELBOW_REST = 0.20f;
+    constexpr float RIGHT_ARM_DOWN = 1.15f;     // staff arm
+    constexpr float RIGHT_ELBOW_REST = 0.95f;   // forearm forward, holding the staff
+
+    // walk cycle
+    constexpr float STRIDE_RATE = 0.72f;        // phase per model unit travelled
+    constexpr float LEG_SWING = 0.50f;
+    constexpr float KNEE_BEND = 0.85f;
+    constexpr float FOOT_COUNTER = 0.6f;        // feet stay roughly level with the ground
+    constexpr float ARM_SWING = 0.45f;
+    constexpr float STAFF_ARM_SWING = 0.20f;
+    constexpr float ELBOW_SWING = 0.35f;
+    constexpr float TORSO_TWIST = 0.10f;
+    constexpr float FORWARD_LEAN = 0.08f;
+    constexpr float WALK_BOB = 0.06f;
+
+    // idle
+    constexpr float BREATH_RATE = 2.2f;
+    constexpr float BREATH_LIFT = 0.015f;
+    constexpr float IDLE_ARM_SWAY = 0.05f;
+    constexpr float LOOK_RATE = 0.35f;
+    constexpr float LOOK_YAW = 0.30f;
+    constexpr float HEAD_TILT = 0.06f;
+
+    // staff: kept upright with its tip on the ground
+    constexpr float STAFF_PIVOT_ABOVE_TIP = 2.29f;  // staff.obj: distance from its pivot down to the tip
+    constexpr float GROUND_Y = 0.03f;               // height of the soles above ROOT
+
+    glm::quat aroundX(const float a) { return glm::angleAxis(a, glm::vec3(1.0f, 0.0f, 0.0f)); }
+    glm::quat aroundY(const float a) { return glm::angleAxis(a, glm::vec3(0.0f, 1.0f, 0.0f)); }
+    glm::quat aroundZ(const float a) { return glm::angleAxis(a, glm::vec3(0.0f, 0.0f, 1.0f)); }
+
+    // move current toward target smoothly, independent of frame rate
+    float approach(const float current, const float target, const float speed, const float dt) {
+        return current + (target - current) * (1.0f - std::exp(-speed * dt));
+    }
+}
 
 void PumpkinCharacter::initialize(const ShaderInfo& shaderInfo) {
     // one default Part per PartID, so the enum values index directly into parts
@@ -71,15 +118,8 @@ void PumpkinCharacter::initialize(const ShaderInfo& shaderInfo) {
     parts[LEG_R].children = {KNEE_R};
     parts[KNEE_R].children = {FOOT_R};
 
-    // Lower both arms from the initial T-pose
-    parts[ARM_L].rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
-    parts[ARM_R].rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
-
-    parts[ARM_L].angle = glm::radians(65.0f);
-    parts[ARM_R].angle = glm::radians(-65.0f);
-
-    parts[STAFF].rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
-    parts[STAFF].angle = glm::radians(65.0f);
+    // start in the rest pose instead of the T-pose
+    applyPose();
 }
 
 void PumpkinCharacter::loadOffsets(const char* filename) {
@@ -123,53 +163,95 @@ void PumpkinCharacter::loadOffsets(const char* filename) {
     }
 }
 
-void PumpkinCharacter::update(float t) {
-    float swing = sin(t / animationTime * 2.0f * PI);
-    parts[LEG_L].angle = 0.45f * swing;
-    parts[LEG_R].angle = -0.45f * swing;
+void PumpkinCharacter::update(const float dt, const float distanceMoved) {
+    time += dt;
 
-    parts[ARM_L].angle = glm::radians(65.0f) - 0.30f * swing;
-    parts[ARM_R].angle = glm::radians(-65.0f) + 0.30f * swing;
+    // walking blends in while the character moves, and back out when it stops
+    const bool moving = distanceMoved > 0.0001f;
+    walkStrength = approach(walkStrength, moving ? 1.0f : 0.0f, WALK_BLEND_SPEED, dt);
 
-    parts[KNEE_L].angle =
-        0.35f * std::max(0.0f, -swing);
+    // the stride follows the distance actually covered, so feet don't slide
+    walkPhase += distanceMoved / scale.y * STRIDE_RATE;
 
-    parts[KNEE_R].angle =
-        0.35f * std::max(0.0f, swing);
+    // idle motion fades in after standing still for a while
+    standTime = moving ? 0.0f : standTime + dt;
+    idleStrength = approach(idleStrength, standTime >= IDLE_DELAY ? 1.0f : 0.0f, IDLE_BLEND_SPEED, dt);
 
-    parts[STAFF].angle = -parts[ARM_R].angle;
+    applyPose();
 }
 
-void PumpkinCharacter::updateIdle(float t) {
-    float slow = sin(1.2f * t);
-    float slower = sin(0.7f * t);
-    float tiny = sin(2.0f * t);
+void PumpkinCharacter::applyPose() {
+    const float walk = walkStrength;
+    const float idle = (1.0f - walkStrength) * idleStrength;
 
-    // torso: tiny sway
-    parts[TORSO].rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
-    parts[TORSO].angle = glm::radians(2.0f) * slow;
+    // shared signals
+    const float stride = std::sin(walkPhase);           // +1 = left leg back
+    const float breath = std::sin(time * BREATH_RATE);
+    const float look = std::sin(time * LOOK_RATE);
 
-    // head: slight left-right motion
-    parts[HEAD].rotationAxis = glm::vec3(0.0f, 1.0f, 0.0f);
-    parts[HEAD].angle = glm::radians(5.0f) * slower;
+    //==================================== Legs ====================================//
+    // knees bend while the leg swings through, so the foot lifts off the ground
+    const float leftLeg = walk * LEG_SWING * stride;
+    const float rightLeg = -walk * LEG_SWING * stride;
+    const float leftKnee = walk * KNEE_BEND * std::max(0.0f, std::sin(walkPhase + 0.9f));
+    const float rightKnee = walk * KNEE_BEND * std::max(0.0f, -std::sin(walkPhase + 0.9f));
 
-    // keep arms dropped, but move a tiny bit
-    parts[ARM_L].rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
-    parts[ARM_R].rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
+    parts[LEG_L].rotation = aroundX(leftLeg);
+    parts[LEG_R].rotation = aroundX(rightLeg);
+    parts[KNEE_L].rotation = aroundX(leftKnee);
+    parts[KNEE_R].rotation = aroundX(rightKnee);
+    parts[FOOT_L].rotation = aroundX(-(leftLeg + leftKnee) * FOOT_COUNTER);
+    parts[FOOT_R].rotation = aroundX(-(rightLeg + rightKnee) * FOOT_COUNTER);
 
-    parts[ARM_L].angle = glm::radians(65.0f) + glm::radians(4.0f) * slow;
-    parts[ARM_R].angle = glm::radians(-65.0f) - glm::radians(4.0f) * slow;
+    //========================= Body bob, lean, and breath =========================//
+    // lowest when the legs are spread, highest when they pass each other
+    const float bob = walk * WALK_BOB * (std::cos(2.0f * walkPhase) - 1.0f) * 0.5f;
+    parts[ROOT].shift = glm::vec3(0.0f, bob, 0.0f);
 
-    // slight elbow motion
-    parts[ELBOW_L].rotationAxis = glm::vec3(1.0f, 0.0f, 0.0f);
-    parts[ELBOW_R].rotationAxis = glm::vec3(1.0f, 0.0f, 0.0f);
+    parts[TORSO].shift = glm::vec3(0.0f, idle * BREATH_LIFT * breath, 0.0f);
+    parts[TORSO].rotation = aroundY(walk * TORSO_TWIST * stride) * aroundX(walk * FORWARD_LEAN);
 
-    parts[ELBOW_L].angle = glm::radians(6.0f) * tiny;
-    parts[ELBOW_R].angle = glm::radians(-6.0f) * tiny;
+    //==================================== Head ====================================//
+    // looks around when idle, stays facing forward against the torso twist when walking
+    parts[HEAD].rotation =
+        aroundY(idle * LOOK_YAW * look - walk * TORSO_TWIST * stride) *
+        aroundZ(idle * HEAD_TILT * std::sin(time * LOOK_RATE * 0.7f)) *
+        aroundX(-walk * FORWARD_LEAN);
 
-    // staff: mostly fixed, very tiny wobble
-    parts[STAFF].rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
-    parts[STAFF].angle = -parts[ARM_R].angle + glm::radians(3.0f) * tiny;
+    //==================================== Arms ====================================//
+    // arms swing opposite to the legs; the staff arm swings less
+    const float leftArmDown = LEFT_ARM_DOWN + idle * IDLE_ARM_SWAY * breath;
+    const float rightArmDown = RIGHT_ARM_DOWN + idle * IDLE_ARM_SWAY * breath;
+
+    parts[ARM_L].rotation = aroundX(-walk * ARM_SWING * stride) * aroundZ(leftArmDown);
+    parts[ARM_R].rotation = aroundX(walk * STAFF_ARM_SWING * stride) * aroundZ(-rightArmDown);
+    parts[ELBOW_L].rotation = aroundY(LEFT_ELBOW_REST + walk * ELBOW_SWING * std::max(0.0f, -stride));
+    parts[ELBOW_R].rotation = aroundY(-RIGHT_ELBOW_REST);
+    parts[HAND_L].rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    parts[HAND_R].rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+
+    //=================================== Staff ====================================//
+    // the staff stays upright with its tip near the ground, wherever the hand is:
+    // find the hand in ROOT space, place the staff there, then convert back to hand space
+    const glm::mat4 handInRoot =
+        parts[TORSO].localMatrix() *
+        parts[ARM_R].localMatrix() *
+        parts[ELBOW_R].localMatrix() *
+        parts[HAND_R].localMatrix();
+    const glm::vec3 grip = glm::vec3(handInRoot * glm::vec4(parts[STAFF].offset, 1.0f));
+
+    // lift the tip a little as the staff arm swings forward
+    const float tipLift = walk * 0.12f * std::max(0.0f, -stride);
+    const float staffY = GROUND_Y + STAFF_PIVOT_ABOVE_TIP + tipLift - bob;
+
+    const glm::mat4 staffInRoot =
+        glm::translate(glm::mat4(1.0f), glm::vec3(grip.x, staffY, grip.z)) *
+        glm::mat4_cast(aroundX(walk * 0.10f * stride) * aroundZ(-0.05f));
+    const glm::mat4 staffInHand = glm::inverse(handInRoot) * staffInRoot;
+
+    // shift moves the staff from its csv offset to the computed spot
+    parts[STAFF].shift = glm::vec3(staffInHand[3]) - parts[STAFF].offset;
+    parts[STAFF].rotation = glm::normalize(glm::quat_cast(glm::mat3(staffInHand)));
 }
 
 void PumpkinCharacter::draw(const std::function<void(const glm::mat4&)>& sendModelMtx) const {
@@ -186,8 +268,7 @@ void PumpkinCharacter::drawPart(int id, const glm::mat4& parentMtx,
     const Part& part = parts[id];
 
     // move to this part's joint, then rotate around it
-    glm::mat4 modelMtx = glm::translate(parentMtx, part.offset);
-    modelMtx = glm::rotate(modelMtx, part.angle, part.rotationAxis);
+    const glm::mat4 modelMtx = parentMtx * part.localMatrix();
 
     if (part.model.has_value()) {   // ROOT has no mesh
         sendModelMtx(modelMtx);

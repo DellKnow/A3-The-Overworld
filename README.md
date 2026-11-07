@@ -67,10 +67,12 @@ up close. There is also an optional second view in the corner of the screen.
 - **Hierarchical model** — the 3D pumpkin has a separate head, torso, shoulders,
   elbows, hands, hips, knees, feet, and staff. Rotating one joint moves
   everything below it.
-- **Walking** — opposite arms and legs swing, the knees bend, and the motion
-  continues through the last part of a step after you release the keys.
-- **Idle** — after 2 seconds without movement, the hero starts making small
-  motions, including head movement and gentle arm/body sway.
+- **Walking** — opposite arms and legs swing, the knees bend, the feet stay
+  level, the body bobs, leans forward, and twists, and the staff stays upright
+  with its tip near the ground. The pose blends smoothly in and out when you
+  start and stop.
+- **Idle** — after 2 seconds without movement, the hero starts breathing,
+  looking around, and tilting the head, with a gentle arm sway.
 - **World** — a block-built snowy island with mountain tiers, roads, houses,
   trees, and water. The character cannot walk into buildings or trees, enter
   water, leave the map, or climb a step higher than one block.
@@ -147,12 +149,13 @@ ROOT/                       (whole character position and heading)
         └── FOOT_R/
 ```
 
-Each `Part` contains an optional `CharacterMesh`, an offset from its parent, a
-rotation axis, an angle, and the indices of its children. `ROOT` does not need a
-mesh. The joint positions come from `parts.csv`. Drawing is recursive:
+Each `Part` contains an optional `CharacterMesh`, an offset from its parent, an
+animated shift, a rotation quaternion, and the indices of its children. `ROOT`
+does not need a mesh. The joint positions come from `parts.csv`. Drawing is
+recursive:
 
 ```text
-parent matrix × local translation × local rotation  →  draw mesh, then children
+parent matrix × translate(offset + shift) × rotation  →  draw mesh, then children
 ```
 
 `CharacterMesh` wraps `CSCI441::ModelLoader`. The loader reads OBJ vertices,
@@ -162,15 +165,22 @@ shader, but each mesh/material gets its own color and reflection coefficients.
 
 ### Animation
 
-Movement and animation use elapsed time (`dt`), not frame count. Opposite arms
-and legs swing using `sin(phase)`. The knees bend during alternating halves of a
-step. The shoulder resting angles keep the arms lowered instead of returning to
-the original T-pose.
+`update(dt, distanceMoved)` runs every frame. The walk phase advances with the
+distance actually walked, so the feet don't slide and walking into a wall stops
+the stride. Opposite arms and legs swing using `sin(phase)`, the knees bend
+during alternating halves of a step, the feet counter-rotate to stay level, and
+the body bobs twice per stride. The shoulder resting angles keep the arms
+lowered instead of the original T-pose.
 
-When movement stops, the remaining step animation can finish. After two seconds
-without movement, `updateIdle()` adds subtle motion to the head, torso, and arms.
-The staff is attached through the right hand, so it follows the right arm's
-hierarchy.
+Walking and idling are weights between 0 and 1 that move toward their targets
+with `1 − e^(−speed·dt)`, so every transition is smooth and frame-rate
+independent. After two seconds standing still, the idle weight fades in:
+breathing, looking around, head tilt, and arm sway.
+
+The staff is a child of the right hand, but each frame its local transform is
+solved so that it stays upright with its tip near the ground: the hand matrix is
+found in `ROOT` space, the staff is placed there, then converted back with the
+inverse hand matrix.
 
 ### World
 

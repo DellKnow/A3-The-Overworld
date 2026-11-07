@@ -1,4 +1,4 @@
-CSCI441 Log Generated at 23:54:35  4 Nov 2026
+CSCI441 Log Generated at 21:33:47  6 Nov 2026
 [INFO]: Using CSCI441 Library v6.1.3.0
 [INFO]: GLFW v3.5.1 initialized
 [INFO]: GLFW Window created
@@ -456,14 +456,14 @@ CSCI441 Log Generated at 23:54:35  4 Nov 2026
 
 
 [INFO]: Setup complete
-[INFO]: Init Time:    0.911s
-[INFO]: 	GLFW:     0.226s
-[INFO]: 	OpenGL:   0.128s
-[INFO]: 	Shaders:  0.094s
+[INFO]: Init Time:    1.053s
+[INFO]: 	GLFW:     0.332s
+[INFO]: 	OpenGL:   0.182s
+[INFO]: 	Shaders:  0.082s
 [INFO]: 	Buffers:  0.000s
-[INFO]: 	Textures: 0.029s
-[INFO]: 	Fonts:    0.004s
-[INFO]: 	Scene:    0.429s
+[INFO]: 	Textures: 0.031s
+[INFO]: 	Fonts:    0.003s
+[INFO]: 	Scene:    0.421s
 
 [INFO]: Shutting down.......
 [INFO]: ...deleting scene...
@@ -476,11 +476,11 @@ CSCI441 Log Generated at 23:54:35  4 Nov 2026
 [INFO]: ...closing window...
 [INFO]: ...closing GLFW.....
 [INFO]: ..shut down complete!
-[INFO]: Shutdown:   0.034s
-[INFO]: 	Scene:    0.001s
+[INFO]: Shutdown:   0.053s
+[INFO]: 	Scene:    0.003s
 [INFO]: 	Fonts:    0.000s
-[INFO]: 	Textures: 0.001s
-[INFO]: 	Buffers:  0.002s
+[INFO]: 	Textures: 0.003s
+[INFO]: 	Buffers:  0.009s
 [INFO]: 	Shaders:  0.001s
 [INFO]: 	OpenGL:   0.000s
-[INFO]: 	GLFW:     0.029s
+[INFO]: 	GLFW:     0.034s

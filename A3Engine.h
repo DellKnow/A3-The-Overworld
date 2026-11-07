@@ -138,9 +138,6 @@ private:
     /// \desc world object: builds platform, trees, houses.
     PumpkinCharacter character;
     GLfloat _characterHeading = 0.0f;
-    /// \desc amount of time animation will still play
-    GLfloat characterAnimationTimer = 0;
-    GLfloat characterIdleTimer = 0;
     /// \desc current time
     GLdouble currentTime = 0;   
     /// \checker whether to draw the grid

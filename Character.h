@@ -4,6 +4,8 @@
 
 #include <CSCI441/materials.hpp>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <CSCI441/ModelLoader.hpp>
 #include <vector>
 #include <optional>
@@ -79,15 +81,15 @@ public:
 struct Part {
     std::optional<CharacterMesh> model;         //  Empty for joints without geometry
 
-    glm::vec3 offset{0.0f};                     // translation vector for the body part
-    
-    glm::vec3 rotationAxis{1.0f, 0.0f, 0.0f};   // rotation axis for the body part
-    float angle = 0.0f;                         // rotation angle for the body part
+    glm::vec3 offset{0.0f};                     // joint position relative to the parent (from parts.csv)
+    glm::vec3 shift{0.0f};                      // extra animated translation (walk bob, breathing)
+    glm::quat rotation{1.0f, 0.0f, 0.0f, 0.0f}; // animated rotation around the joint
 
     std::vector<int> children;                  // indices from std::vector<Part> in PumpkinCharacter
 
-    void resetAngle() {
-        angle = 0.0f;                           // reset the angle of the part
+    // this part's matrix relative to its parent: move to the joint, then rotate
+    glm::mat4 localMatrix() const {
+        return glm::translate(glm::mat4(1.0f), offset + shift) * glm::mat4_cast(rotation);
     }
 };
 
@@ -100,7 +102,15 @@ private:
     float rotation = 0.0f;      // rotation of the pumpkin character (axes defined by body parts)
     glm::vec3 scale{1.0f};      // scaled pumpkin character if needed
 
-    float animationTime = 1.0;                  // in seconds the phase of animation
+    // animation state
+    float walkPhase = 0.0f;     // stride phase in radians, advances with distance travelled
+    float walkStrength = 0.0f;  // 0 = standing, 1 = walking (blended over time)
+    float idleStrength = 0.0f;  // 0 = rest pose, 1 = full idle motion (blended over time)
+    float standTime = 0.0f;     // seconds since the character last moved
+    float time = 0.0f;          // total animated time, drives breathing and looking around
+
+    // pose every joint from the current animation state
+    void applyPose();
 
     void loadOffsets(const char* filename);         // read each part's offset from parts.csv
 
@@ -113,9 +123,9 @@ public:
     void setRotation(const float& newRotation) { rotation = newRotation; } // rotate the character in the world
     void setScale(const glm::vec3& newScale) { scale = newScale; } // scale the character in the world
     void moveCharacter(const glm::vec3& dir) { position += dir; }   // move the character in the world in the given direction
-    float getAnimationTime() { return animationTime; }      // return the animation time of the character
-    void updateIdle(float t);                       // idle animation of the character
-    void update(float dt);                          // update the character position given time
+    // animate the character every frame; distanceMoved is how far it walked this frame (world units)
+    // walking and idling blend smoothly, idle motion starts after 2 seconds of standing still
+    void update(float dt, float distanceMoved);
     void reset();                                   // reset the character to the initial position
     // draw the character; sendModelMtx is called with each part's model matrix before it is drawn
     void draw(const std::function<void(const glm::mat4&)>& sendModelMtx) const;

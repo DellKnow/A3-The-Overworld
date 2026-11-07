@@ -589,17 +589,8 @@ void A3Engine::_updateScene() {
     const GLfloat dt = glm::min(static_cast<GLfloat>(currentTime - _lastUpdateTime), 0.1f);
     _lastUpdateTime = currentTime;
 
-    // printf("%f\n", characterAnimationTimer);
-    if (characterAnimationTimer > 0) {
-        characterAnimationTimer = std::max(characterAnimationTimer - dt, 0.0f);
-        character.update(characterAnimationTimer);
-    }
-
-    characterIdleTimer += dt;
-
-    if (characterIdleTimer >= 2.0) {
-        character.updateIdle(characterIdleTimer - 2.0);
-    }
+    // how far the character walked this frame, drives the walk animation
+    GLfloat characterDistance = 0.0f;
 
     // walk while W/S/A/D are held
     const GLfloat inputMain = (_keys[GLFW_KEY_W] ? 1.0f : 0.0f) - (_keys[GLFW_KEY_S] ? 1.0f : 0.0f);
@@ -616,7 +607,6 @@ void A3Engine::_updateScene() {
                 _characterHeading += turn;
                 _pFirstCam->setTheta(_pFirstCam->getTheta() - turn);
                 _pFirstCam->recomputeOrientation();
-                characterIdleTimer = 0.0f;
             }
 
             // W/S move along the character's heading
@@ -628,12 +618,8 @@ void A3Engine::_updateScene() {
                 if (world.isWalkable(next.x, next.z, next.y)) {
                     next.y = world.groundHeight(next.x, next.z);
                     _pArcballCam->setTarget(next);
+                    characterDistance = WALK_SPEED * dt;
                 }
-
-                if (characterAnimationTimer == 0) {
-                    characterAnimationTimer = character.getAnimationTime();
-                }
-                characterIdleTimer = 0.0f;
             }
 
             character.setPosition(_pArcballCam->getLookAtPoint());
@@ -668,7 +654,9 @@ void A3Engine::_updateScene() {
 
         default: break; // suppress CLion warning
     }
-    
+
+    // walk while moving, blend back to rest when stopped, idle after standing still
+    character.update(dt, characterDistance);
 }
 
 
